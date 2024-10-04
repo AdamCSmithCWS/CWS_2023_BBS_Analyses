@@ -32,13 +32,13 @@ sp_list <- sp_sum %>%
             n_routes = length(unique(route_name)),
             n_years = length(unique(year))) %>%
   arrange(n_routes,n_obs,n_years) %>%
-  mutate(model = ifelse((n_obs > 20 &
-                        n_years > 20 &
+  mutate(model = ifelse((n_obs > 30 &
+                        n_years > 30 &
                         n_routes > 2),
                         TRUE,FALSE))
 
-#######  ADD in specific start years for some species
-
+#split the species list into groups to spread across many processors
+#
 sp_list_mod <- sp_list %>%
   filter(model)
 sp_list_mod[,"vm"] <- rep(1:10,length.out = nrow(sp_list_mod)) # setting a permanent list of which species go to which vms
