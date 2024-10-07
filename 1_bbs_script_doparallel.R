@@ -1,18 +1,17 @@
 ## testing bbsBayes2 parallel in HRE env
 
-shhh <- suppressPackageStartupMessages # so I don't get a bunch of start up messages in the output file, a tip I encountered while searching through StackOverflow...
 library(bbsBayes2)
 library(tidyverse)
 library(foreach)
 library(doParallel)
-
+library(cmdstanr)
 #setwd("C:/github/CWS_2022_BBS_Analyses")
-setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2022_BBS_Analyses")
+#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2022_BBS_Analyses")
 
 
 # set output_dir to the directory where the saved modeling output rds files will be stored
 # necessary on most systems because these output files are very large ( up to 5GB for broad-ranging species)
-output_dir <- "F:/CWS_2022_BBS_Analyses/output"
+#output_dir <- "F:/CWS_2023_BBS_Analyses/output"
 output_dir <- "output"
 
 re_run <- FALSE # set to TRUE if re-running poorly converged models
@@ -21,8 +20,8 @@ re_run <- FALSE # set to TRUE if re-running poorly converged models
 miss <- FALSE
 csv_recover <- FALSE
 
-machine = NULL#2#9 #as of Nov 30, machine 8 remains to be run
-n_cores = 8
+machine = 1
+n_cores = 4
 
 #n_cores <- floor((detectCores()-1)/4) # requires 4 cores per species
 
@@ -61,7 +60,7 @@ cluster <- makeCluster(n_cores, type = "PSOCK")
 registerDoParallel(cluster)
 
 
-test <- foreach(i = rev(1:nrow(sp_list)),
+test <- foreach(i = c(35:43),#rev(1:nrow(sp_list)),
         .packages = c("bbsBayes2",
                       "tidyverse",
                       "cmdstanr"),
@@ -92,6 +91,7 @@ test <- foreach(i = rev(1:nrow(sp_list)),
    strat <- "bbs_cws"
 
    s <- stratify(by = strat,
+                 release = 2024,
               species = sp,
               quiet = TRUE) %>%
   prepare_data(min_max_route_years = 2,
@@ -129,16 +129,33 @@ fit <- run_model(model_data = bbs_dat,
                  iter_warmup = 2000,
                  iter_sampling = 2000,
                  thin = 2,
-                 output_dir = output_dir,
-                 output_basename = paste0("fit_",aou))
+                 #output_dir = output_dir,
+                 output_basename = paste0("fit_",aou),
+                 save_model = FALSE,
+                 overwrite = TRUE,
+                 init = 1)
+
+# Summ <- fit$model_fit$summary()
+
+
+
 
 }else{
   fit <- run_model(model_data = bbs_dat,
                    refresh = 400,
-                   output_dir = output_dir,
-                   output_basename = paste0("fit_",aou))
+                   output_basename = paste0("fit_",aou),
+                   save_model = FALSE,
+                   overwrite = TRUE,
+                   init = 1)
 
 }
+
+   bbsBayes2::save_model_run(fit,
+                             retain_csv = FALSE,
+                             save_file_path = paste0(output_dir,
+                                                     "/fit_",
+                                                     aou,
+                                                     ".rds"))
 
 
 
