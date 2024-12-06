@@ -5,15 +5,15 @@ library(foreach)
 library(doParallel)
 
 
-#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2022_BBS_Analyses")
-setwd("C:/GitHub/CWS_2022_BBS_Analyses")
+#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2023_BBS_Analyses")
+#setwd("C:/GitHub/CWS_2023_BBS_Analyses")
 
 # set output_dir to the directory where the saved modeling output rds files are stored
-output_dir <- "D:/output_BBS"
+output_dir <- "D:/CWS_2023_BBS_Analyses/output"
 # output_dir <- "output"
-# output_dir <- "F:/CWS_2022_BBS_Analyses/output"
+# output_dir <- "F:/CWS_2023_BBS_Analyses/output"
 
-n_cores = 3 # if desired, can be run in parallel across many species
+n_cores = 10 # if desired, can be run in parallel across many species
 
 re_run <- FALSE # if TRUE will recalculate and overwrite previous saved indices for each species
 # if FALSE, will skip species with saved indices files
@@ -31,8 +31,9 @@ regs_to_estimate <- c("continent","country","prov_state","bcr","bcr_by_country",
 cluster <- makeCluster(n_cores, type = "PSOCK")
 registerDoParallel(cluster)
 
+order_random <- sample(1:nrow(sp_list),nrow(sp_list))
 
-test <- foreach(i = rev(1:nrow(sp_list)),
+test <- foreach(i = order_random,
                 .packages = c("bbsBayes2",
                               "tidyverse",
                               "cmdstanr"),
