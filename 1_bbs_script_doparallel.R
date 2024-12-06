@@ -5,25 +5,31 @@ library(tidyverse)
 library(foreach)
 library(doParallel)
 library(cmdstanr)
-#setwd("C:/github/CWS_2022_BBS_Analyses")
-#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2022_BBS_Analyses")
 
+setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2023_BBS_Analyses")
 
 # set output_dir to the directory where the saved modeling output rds files will be stored
 # necessary on most systems because these output files are very large ( up to 5GB for broad-ranging species)
-#output_dir <- "F:/CWS_2023_BBS_Analyses/output"
-output_dir <- "output"
+output_dir <- "D:/CWS_2023_BBS_Analyses/output"
+#output_dir <- "output"
 
-re_run <- FALSE # set to TRUE if re-running poorly converged models
+write_over <- TRUE # set to TRUE if overwriting previously run models
+re_fit <- TRUE# set to TRUE if re-running poorly converged models
 
+if(re_fit){
+  #sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_",as_date(Sys.Date()),".rds"))
+  sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
+}
 
 miss <- FALSE
 csv_recover <- FALSE
+machine = NULL
+#machine = 1
 
-machine = 1
-n_cores = 4
 
-#n_cores <- floor((detectCores()-1)/4) # requires 4 cores per species
+
+
+#n_cores <- floor((parallel::detectCores()-1)/4) # requires 4 cores per species
 
 if(!is.null(machine)){
 sp_list <- readRDS("species_list.rds") %>%
@@ -39,9 +45,9 @@ if(miss){
     filter(model == TRUE)
 }
 
-if(re_run){
+if(re_fit){
   sp_list <- sp_list %>%
-    filter(english %in% sp_rerun)
+    filter(english %in% sp_re_fit)
 }
 # completed_files <- list.files("output",pattern = "fit_")
 # completed_aou <- as.integer(str_extract_all(completed_files,
@@ -55,12 +61,14 @@ if(re_run){
 # i <- which(sp_list$aou == 6882)
 # build cluster -----------------------------------------------------------
 
+n_cores = 3
+#n_cores <- floor(parallel::detectCores()/4)-1
 
 cluster <- makeCluster(n_cores, type = "PSOCK")
 registerDoParallel(cluster)
 
 
-test <- foreach(i = c(35:43),#rev(1:nrow(sp_list)),
+test <- foreach(i = rev(1:nrow(sp_list)),
         .packages = c("bbsBayes2",
                       "tidyverse",
                       "cmdstanr"),
@@ -68,12 +76,22 @@ test <- foreach(i = c(35:43),#rev(1:nrow(sp_list)),
   {
 
    # for(i in 1:4){
+    #for(i in rev(1:nrow(sp_list))){  # tmp_clr){ #
     sp <- as.character(sp_list[i,"english"])
     aou <- as.integer(sp_list[i,"aou"])
 
-    if(!file.exists(paste0(output_dir,"/fit_",aou,".rds")) |
-       re_run){
+    if((!file.exists(paste0(output_dir,"/fit_gam_",aou,".rds")) &
+       !file.exists(paste0("fit_",aou,"-",c(1),".csv"))) |  # checks to see if the model has been fit or if it is currently running
+       (write_over & !file.exists(paste0("fit_gam_",aou,"-",c(1),".csv"))) |  # if TRUE and model is not currently running
+       (re_fit & (!file.exists(paste0(output_dir,"/fit_",aou,".rds")) &
+                  !file.exists(paste0("fit_gam_",aou,"-",c(1),".csv"))) ) | # if refitting and model is not currently running
+       csv_recover){ # if TRUE then doesn't re-fit just reads in the csv files that may have failed to save to external disk
 
+      if(csv_recover & !file.exists(paste0("fit_",aou,"-",c(1),".csv"))){next}
+
+    #   print(paste(sp,aou))
+    # }
+    # }
 # identifying first years for selected species ----------------------------
     fy <- NULL
     if(aou %in% c(4661,4660)){ #Alder and Willow Flycatcher
@@ -117,23 +135,57 @@ test <- foreach(i = c(35:43),#rev(1:nrow(sp_list)),
 
    if(csv_recover){
      fit <- bbs_dat
-     csv_files <- paste0(output_dir,"/fit_",aou,"-",c(1:4),".csv")
-      fit[["model_fit"]] <- cmdstanr::as_cmdstan_fit(files = csv_files)
-      save_model_run(fit,retain_csv = TRUE)
+     csv_files <- paste0("fit_",aou,"-",c(1:4),".csv")
+      check1 <- try(cmdstanr::as_cmdstan_fit(files = csv_files),
+                    silent = TRUE)
+      if(class(check1)[1] == "try-error"){
+        check1 <- try(cmdstanr::as_cmdstan_fit(files = csv_files),
+                      silent = TRUE)
+      }
+        if(class(check1)[1] == "try-error"){
+          print(aou)
+          print(check1)
+          next}
+      check2 <- try(check1$summary(variables = "STRATA"),silent = TRUE)
+      if(class(check2)[1] == "try-error"){
+        print(aou)
+        print(check2)
+        next}
+      fit[["model_fit"]] <- check1
+      save_model_run(fit,retain_csv = FALSE,
+                     save_file_path = paste0(output_dir,
+                                             "/fit_",
+                                             aou,
+                                             ".rds"))
 
      next}
 
-if(re_run){
+if(re_fit){
+
+  # bbs_dat <- prepare_spatial(s,
+  #                            strata_map = load_map(strat)) %>%
+  #   prepare_model(model = "gam",
+  #                 model_variant = "spatial")
+
+  bbs_dat <- prepare_spatial(s,
+                             strata_map = load_map(strat)) %>%
+    prepare_model(.,
+                  model = "gamye",
+                  model_variant = "spatial",
+                  model_file = "models_alt/gamye_spatial_bbs_CV_COPY.stan")
+
 fit <- run_model(model_data = bbs_dat,
                  refresh = 400,
-                 iter_warmup = 2000,
-                 iter_sampling = 2000,
-                 thin = 2,
+                 iter_warmup = 6000,
+                 iter_sampling = 4000,
+                 thin = 4,
                  #output_dir = output_dir,
+                 #output_basename = paste0("fit_gam_",aou),
                  output_basename = paste0("fit_",aou),
                  save_model = FALSE,
-                 overwrite = TRUE,
-                 init = 1)
+                 overwrite = write_over,
+                 show_exceptions = TRUE,
+                 init_alternate = 1)
 
 # Summ <- fit$model_fit$summary()
 
@@ -145,8 +197,8 @@ fit <- run_model(model_data = bbs_dat,
                    refresh = 400,
                    output_basename = paste0("fit_",aou),
                    save_model = FALSE,
-                   overwrite = TRUE,
-                   init = 1)
+                   overwrite = write_over,
+                   init_alternate = 1)
 
 }
 
@@ -154,6 +206,7 @@ fit <- run_model(model_data = bbs_dat,
                              retain_csv = FALSE,
                              save_file_path = paste0(output_dir,
                                                      "/fit_",
+                                                     #"/fit_gam_",
                                                      aou,
                                                      ".rds"))
 

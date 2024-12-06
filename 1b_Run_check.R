@@ -5,11 +5,10 @@ library(tidyverse)
 library(foreach)
 library(doParallel)
 
-#setwd("C:/github/CWS_2022_BBS_Analyses")
-#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2022_BBS_Analyses")
+#setwd("C:/github/CWS_2023_BBS_Analyses")
+#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2023_BBS_Analyses")
 
-#output_dir <- "F:/CWS_2022_BBS_Analyses/output"
-output_dir <- "D:/output_BBS"
+output_dir <- "D:/CWS_2023_BBS_Analyses/output"
 #output_dir <- "output"
 
 
@@ -26,7 +25,8 @@ for(i in 1:nrow(sp_list)){
   aou <- as.integer(sp_list[i,"aou"])
 
   if(!file.exists(paste0(output_dir,"/fit_",aou,".rds"))){
-  if(file.exists(paste0(output_dir,"/fit_",aou,"-1.csv"))){
+
+  if(file.exists(paste0("fit_",aou,"-1.csv"))){
     sp_track[i,"test"] <- paste0("Running_",as.character(Sys.info()["nodename"]))
     next
   }
@@ -66,8 +66,11 @@ for(i in 1:nrow(sp_list)){
 
 
   }else{# end of if file.exists
-
-    sp_track[i,"test"] <- "Complete"
+if(file.exists(paste0("fit_",aou,"-1.csv"))){
+  sp_track[i,"test"] <- "Both_check"
+}else{
+  sp_track[i,"test"] <- "Complete"
+  }
 
   }
 
@@ -80,6 +83,8 @@ for(i in 1:nrow(sp_list)){
 
 }
 
+
+  table(sp_track$test,sp_track$vm)
 
   saveRDS(sp_track,paste0("sp_track",as.character(Sys.info()["nodename"]),".rds"))
 
@@ -102,7 +107,12 @@ for(i in 1:nrow(sp_list)){
 
   sp_miss <- sp_complete %>% filter(grepl("Sufficient",test))
 
-  saveRDS(sp_miss,"species_missing.rds")
+  if(nrow(sp_miss) > 0){
+    stop(paste(paste("There are",nrow(sp_miss),"species missing. Including"),
+               paste(sp_miss$english, collapse = ", ")))
+    saveRDS(sp_miss,"species_missing.rds")
+    }
+
 
 
 
@@ -110,8 +120,8 @@ for(i in 1:nrow(sp_list)){
 
   # combine and compare with last year --------------------------------------
 
-
-  lastyear = read_csv("data/All_2021_BBS_trends.csv") %>%
-    filter(Region == "Continental",
-           Trend_Time == "Long-term")
+#
+#   lastyear = read_csv("data/All_2022_BBS_trends.csv") %>%
+#     filter(Region == "Continental",
+#            Trend_Time == "Long-term")
 
