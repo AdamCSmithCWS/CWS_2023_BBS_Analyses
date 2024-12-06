@@ -27,19 +27,50 @@ sp_list <- readRDS("species_list.rds") %>%
 
 regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
 
-# load previous coverage data -----------------------------------------------------------
 
-lastyear = read_csv("data/All_2021_BBS_trends.csv")
-covs = lastyear[,c("species","bbs_num","Region","Region_alt","Trend_Time","reliab.cov")] %>%
-  mutate(Region = ifelse(Region == "Continental","continent",Region),
-         Region = ifelse(Region_alt == "Canada","Canada",Region),
-         Region = ifelse(Region == "US","United States of America",Region))
 
-three_gens <- read_csv("data/full_bbs_species_list_w_generation_length.csv")
 
-three_gens <- three_gens %>%
-  select(aou,GenLength)
 
+
+
+# Three generation times --------------------------------------------------
+sp_codes <- naturecounts::meta_species_codes() %>%
+  filter(authority == "BBS2") %>%
+  mutate(aou = as.integer(species_code),
+         naturecounts_species_id = species_id) %>%
+  select(aou,naturecounts_species_id)
+
+sp_list <- sp_list %>%
+  left_join(sp_codes, by = "aou")
+
+sp_id <- naturecounts::meta_species_taxonomy() %>%
+  select(english_name,sort_order,scientific_name,species_id) %>%
+  rename_with(~paste0("naturecounts_",.x))
+
+sp_list <- sp_list %>%
+  left_join(sp_id, by = c("naturecounts_species_id"))
+
+
+re_naturecounts <- FALSE
+if(re_naturecounts){
+gen_years <- naturecounts::nc_query_table(table = "SpeciesLifeHistory") %>%
+  filter(subcategDescr == "Average generation length (years)") %>%
+  select(speciesID,value) %>%
+  rename(GenLength = value) %>%
+  distinct()
+saveRDS(gen_years,"data/naturecounts_generation_times.rds")
+}else{
+gen_years <- readRDS("data/naturecounts_generation_times.rds")
+}
+
+sp_list <- sp_list %>%
+  left_join(gen_years, by = c("naturecounts_species_id" = "speciesID"))
+
+# three_gens <- read_csv("data/full_bbs_species_list_w_generation_length.csv")
+#
+# three_gens <- three_gens %>%
+#   select(aou,GenLength)
+# #
 sp_list <- sp_list %>%
   inner_join(.,three_gens,
              by = c("aou"))
