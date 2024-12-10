@@ -21,6 +21,8 @@ db <- load_map("latlong") %>%
 
 qual_ebird <- ebirdst_runs
 
+ly <- max(bbsBayes2::load_bbs_data()$route$year)
+
 
 # load maps of regions ----------------------------------------------------
 
@@ -31,7 +33,7 @@ bcrs <- load_map("bcr")
 countries <- rnaturalearth::ne_countries(continent = "North America") %>%
   filter(sovereignt %in% c("Canada","United States of America"))
 
-for(i in 1:nrow(sp_list$english)){
+for(i in rev(1:nrow(sp_list))){
 
   sp_sel <- unname(unlist(sp_list[i,"english"]))
 
@@ -48,9 +50,9 @@ for(i in 1:nrow(sp_list$english)){
   if(sp_sel == "Western Grebe (Clark's/Western)"){next} # avoiding confusion with true Western Grebe
 
   sp_sel1 <- ifelse(grepl(pattern = " \\(",
-                         sp_sel1),
-                   str_extract(string = sp_sel1,pattern = ".*(?= \\()"),
-                   sp_sel1)
+                         sp_sel),
+                   str_extract(string = sp_sel,pattern = ".*(?= \\()"),
+                   sp_sel)
 
 
   sp_ebird <- ebirdst::get_species(sp_sel1)
@@ -86,7 +88,7 @@ for(i in 1:nrow(sp_list$english)){
     # }
     # }
     # identifying first years for selected species ----------------------------
-    fy <- NULL
+    fy <- 1970
     if(aou %in% c(4661,4660)){ #Alder and Willow Flycatcher
       fy <- 1978 #5 years after the split
     }
@@ -124,9 +126,69 @@ strat_coverage <- regional_summary(sp_coverage,
                              regions = strata,
                              region_name = "strata_name")
 
-country_coverage <- regional_summary(sp_coverage,
-                                     regions = countries,
-                                     region_name = "sovereignt")
+# country_coverage <- regional_summary(sp_coverage,
+#                                      regions = countries,
+#                                      region_name = "sovereignt")
+
+saveRDS(strat_coverage,paste0("coverage/coverage_",aou,".rds"))
+
+
+
+# short-term trends coverage ----------------------------------------------
+
+
+for(ttime in c("Long-term","Short-term","Three-generation")){
+
+if(ttime == "Long-term"){fy <- 1970}
+  if(ttime == "Short-term"){fy <- ly-10}
+  if(ttime == "Three-generation"){
+
+    fy <- ly-3g
+      }
+
+fy <- NULL
+if(aou %in% c(4661,4660)){ #Alder and Willow Flycatcher
+  fy <- 1978 #5 years after the split
+}
+if(aou %in% c(10,11,22860)){ # Clark's and Western Grebe and EUCD
+  fy <- 1990 #5 years after the split and first year EUCD observed on > 3 BBS routes
+}
+if(aou == 6121){ # CAve Swallow
+  fy = 1985
+}
+
+strat <- "bbs_cws"
+
+s <- stratify(by = strat,
+              release = 2024,
+              species = sp_sel,
+              quiet = TRUE) %>%
+  prepare_data(min_max_route_years = 2,
+               quiet = TRUE,
+               min_year = fy)
+
+survey_data <- s$raw_data %>%
+  select(route,latitude,longitude,year)
+
+
+sp_coverage <- overlay_range_data(range = range_info,
+                                  survey_sites = survey_data,
+                                  sites = "route",
+                                  years = "year",
+                                  x_coord = "longitude",
+                                  y_coord = "latitude",
+                                  crs_site_coordinates = 4326,
+                                  add_survey_sites_to_range = TRUE)
+
+strat_coverage <- regional_summary(sp_coverage,
+                                   regions = strata,
+                                   region_name = "strata_name")
+
+# country_coverage <- regional_summary(sp_coverage,
+#                                      regions = countries,
+#                                      region_name = "sovereignt")
+
+saveRDS(strat_coverage,paste0("coverage/coverage_",aou,".rds"))
 
 
 }

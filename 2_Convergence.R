@@ -22,7 +22,9 @@ re_run <- TRUE # set to TRUE if re-assessing convergence of models
 
 sp_list <- readRDS("species_list.rds") %>%
   filter(model == TRUE)
-
+sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
+sp_list <- sp_list %>%
+  filter(english %in% sp_re_fit)
 
 
 # build cluster -----------------------------------------------------------
@@ -39,7 +41,7 @@ test <- foreach(i = rev(1:nrow(sp_list)),
                 .errorhandling = "pass") %dopar%
   {
 
-    # for(i in 1:4){
+     for(i in 1:3){
     sp <- as.character(sp_list[i,"english"])
     aou <- as.integer(sp_list[i,"aou"])
 
