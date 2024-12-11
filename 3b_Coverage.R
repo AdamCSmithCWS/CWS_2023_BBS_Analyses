@@ -176,7 +176,7 @@ for(i in rev(1:nrow(sp_list_gen))){
 
   aou <- as.integer(sp_list_gen[i,"aou"])
   strat <- "bbs_cws"
-  three_g <- max(c(10,round(sp_list_gen[i,"GenLength"]*3)))
+  three_g <- max(c(10,round(as.numeric(sp_list_gen[i,"GenLength"])*3)))
 #     #   print(paste(sp,aou))
 #     # }
 #     # }
@@ -285,5 +285,5 @@ saveRDS(strat_coverage,paste0("coverage/coverage_",ttime,"_",aou,".rds"))
 
 }
 
-
+}
 
