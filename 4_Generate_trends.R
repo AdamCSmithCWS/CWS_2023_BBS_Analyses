@@ -8,8 +8,8 @@ library(patchwork)
 YYYY <- 2022
 short_time <- 10
 
-#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2022_BBS_Analyses")
-setwd("C:/github/CWS_2022_BBS_Analyses")
+#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2023_BBS_Analyses")
+setwd("C:/github/CWS_2023_BBS_Analyses")
 
 
 # custom functions to calculate reliability categories and determine website inclusion
@@ -21,35 +21,14 @@ source("functions/reliability.R")
 n_cores <- 10
 re_run <- TRUE
 
+# species list that also includes generation length
+# created in 3b_Coverage.R
+#
 
-sp_list <- readRDS("species_list.rds") %>%
+sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
 
 regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
-
-
-
-
-
-
-
-# three_gens <- read_csv("data/full_bbs_species_list_w_generation_length.csv")
-#
-# three_gens <- three_gens %>%
-#   select(aou,GenLength)
-# #
-sp_list <- sp_list %>%
-  inner_join(.,three_gens,
-             by = c("aou"))
-
-
-
-# CV_threshold <- function(m,ci,thresh = 100){
-#   y <- ifelse(ci/m > thresh,TRUE,FALSE)
-#   return(y)
-# }
-#
-
 
 
 # reliability category definitions ----------------------------------------
@@ -93,8 +72,6 @@ test <- foreach(i = rev(1:nrow(sp_list)),
                           replacement = "_")
 
 
-    cov_sp <- covs %>%
-      filter(bbs_num == aou)
 
     if(file.exists(paste0("Indices/Inds_",aou,".rds")) &
        (!file.exists(paste0("Trends/",aou,"_trends.rds")) | re_run)){
@@ -146,19 +123,19 @@ test <- foreach(i = rev(1:nrow(sp_list)),
 
 
       for(j in names(start_years)){
+        ssy <- start_years[j]
 
-        cov_sp_y <- cov_sp %>%
-          filter(Trend_Time == j) %>%
-          select(bbs_num,Region,reliab.cov)
+        cov_sp_y <- readRDS(paste0("coverage/coverage_",j,"_",aou,".rds")) %>%
+          mutate(summary_region = ifelse(region_type == "bcr",
+                                         gsub(summary_region,
+                                              pattern = "BCR",
+                                              replacement = ""),
+                                         summary_region),
+                 reliab.cov = proportion_of_region) %>%
+          select(summary_region,reliab.cov,region_type)
 
-        if(nrow(cov_sp_y) == 0){
-          cov_sp_y <- cov_sp %>%
-            filter(Trend_Time == "Short-term") %>%
-            select(bbs_num,Region,reliab.cov)
 
-        }
 
-          ssy <- start_years[j]
 
         trends_tmp <- generate_trends(inds,
                                       min_year = ssy,
@@ -196,8 +173,8 @@ test <- foreach(i = rev(1:nrow(sp_list)),
                    bbs_num = aou,
                    trend_time = j,
                    for_web = for_web_func(strata_included,strata_excluded)) %>%
-            left_join(.,cov_sp_y,by = c("bbs_num",
-                                     "region" = "Region"))
+            left_join(.,cov_sp_y,by = c("region" = "summary_region",
+                                     "region_type"))
 
 
 
