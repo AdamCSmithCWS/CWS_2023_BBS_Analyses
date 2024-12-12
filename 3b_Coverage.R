@@ -28,7 +28,10 @@ regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by
 
 stratum <- load_map("bbs_cws")
 
-prov_state <- load_map("prov_state")
+prov_state <- load_map("bbs_cws") %>%
+  group_by(prov_state) %>%
+  summarise() %>%
+  mutate(strata_name = prov_state)
 
 bcr <- load_map("bcr")
 
