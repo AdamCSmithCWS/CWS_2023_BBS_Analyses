@@ -3,7 +3,7 @@
 # if (!requireNamespace("remotes", quietly = TRUE)) {
 #   install.packages("remotes")
 # }
-# remotes::install_github("AdamCSmithCWS/SurveyCoverage")
+# remotes::install_github("AdamCSmithCWS/SurveyCoverage@dev")
 
 
 library(SurveyCoverage)
@@ -24,13 +24,38 @@ ly <- max(bbsBayes2::load_bbs_data()$route$year)
 
 # load maps of regions ----------------------------------------------------
 
+regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
 
-strata <- load_map("bbs_usgs")
-prov_state <- load_map("prov_state")
-bcrs <- load_map("bcr")
-countries <- rnaturalearth::ne_countries(continent = "North America") %>%
-  filter(sovereignt %in% c("Canada","United States of America"))
+stratum <- load_map("bbs_cws")
 
+prov_state <- load_map("bbs_cws") %>%
+  group_by(prov_state) %>%
+  summarise() %>%
+  mutate(strata_name = prov_state)
+
+bcr <- load_map("bcr")
+
+bcr_by_country <- load_map("bbs_cws") %>%
+  group_by(bcr_by_country) %>%
+  summarise() %>%
+  rename(strata_name = bcr_by_country)
+
+country <- rnaturalearth::ne_countries(continent = "North America") %>%
+  filter(admin %in% c("Canada","United States of America")) %>%
+  sf::st_transform(crs = sf::st_crs(stratum)) %>%
+  rename(strata_name = admin) %>%
+  select(strata_name)
+
+continent <- country %>%
+  summarise() %>%
+  mutate(strata_name = "continent")
+
+regs_maps <- list(continent = continent,
+                  country = country,
+                  prov_state = prov_state,
+                  bcr = bcr,
+                  stratum = stratum,
+                  bcr_by_country = bcr_by_country)
 
 # Load three generation times from naturecounts ---------------------------
 
@@ -54,11 +79,11 @@ sp_id <- naturecounts::meta_species_taxonomy() %>%
 sp_list <- sp_list %>%
   left_join(sp_id, by = c("naturecounts_species_id"))
 
-
-re_naturecounts <- TRUE
+redo_generations <- FALSE
+re_naturecounts <- FALSE
 gen_years_all <- naturecounts::nc_query_table(table = "SpeciesLifeHistory") %>%
   filter(subcategDescr == "Average generation length (years)")
-
+if(redo_generations){
 if(re_naturecounts){
 
   gen_years <- naturecounts::nc_query_table(table = "SpeciesLifeHistory") %>%
@@ -123,9 +148,29 @@ gtmp <- mean(gensj$value,na.rm = TRUE)
 }
 saveRDS(sp_list_gen,"sp_list_w_generations.rds")
 
+}
+
+# Coverage loops ----------------------------------------------------------
+library(foreach)
+library(doParallel)
+
+sp_list_gen <- readRDS("sp_list_w_generations.rds")
+n_cores = 12
+#n_cores <- floor(parallel::detectCores()/4)-1
+
+cluster <- makeCluster(n_cores, type = "PSOCK")
+registerDoParallel(cluster)
 
 
-for(i in rev(1:nrow(sp_list_gen))){
+test <- foreach(i = rev(1:nrow(sp_list_gen)),
+                .packages = c("bbsBayes2",
+                              "tidyverse",
+                              "ebirdst",
+                              "SurveyCoverage"),
+                .errorhandling = "pass") %dopar%
+  {
+
+#for(i in rev(1:nrow(sp_list_gen))){
 
   sp_sel <- unname(unlist(sp_list_gen[i,"english"]))
 
@@ -231,7 +276,7 @@ for(i in rev(1:nrow(sp_list_gen))){
 
 for(ttime in c("Long-term","Short-term","Three-generation")){
 
-if(ttime == "Long-term"){fy <- 1970}
+if(ttime == "Long-term"){fy <- 1966}
   if(ttime == "Short-term"){fy <- ly-10}
   if(ttime == "Three-generation"){
 
@@ -260,7 +305,7 @@ s <- stratify(by = strat,
                min_year = fy)
 
 survey_data <- s$raw_data %>%
-  select(route,latitude,longitude,year)
+  select(route,latitude,longitude,year,strata_name)
 
 
 sp_coverage <- overlay_range_data(range = range_info,
@@ -272,18 +317,108 @@ sp_coverage <- overlay_range_data(range = range_info,
                                   crs_site_coordinates = 4326,
                                   add_survey_sites_to_range = TRUE)
 
-strat_coverage <- regional_summary(sp_coverage,
-                                   regions = strata,
+saveRDS(sp_coverage,paste0("coverage/coverage_maps_",ttime,"_",aou,".rds"))
+
+ann_coverage <- NULL
+cumulative_coverage <- NULL
+
+for(reg in regs_to_estimate){
+
+  mp_tmp <- regs_maps[[reg]]
+tmp_coverage <- regional_summary(sp_coverage,
+                                   regions = mp_tmp,
                                    region_name = "strata_name")
+
+ ann_tmp <- tmp_coverage$regional_annual_coverage_estimate %>%
+  filter(coverage) %>%
+  mutate(region_type = reg,
+         species = sp_sel,
+         aou = aou)
+
+ cumulative_tmp <- tmp_coverage$regional_cumulative_coverage_estimate %>%
+   filter(coverage) %>%
+   mutate(region_type = reg,
+          species = sp_sel,
+          aou = aou)
+
+ ann_coverage <- bind_rows(ann_coverage,ann_tmp)
+ cumulative_coverage <- bind_rows(cumulative_coverage,cumulative_tmp)
+
+} #end of regions loop
+
+# cover_save <- list(annual_coverage = ann_coverage,
+#                    cumulative_coverage = cumulative_coverage)
+saveRDS(cumulative_coverage,paste0("coverage/coverage_",ttime,"_",aou,".rds"))
+#
+# bcr_coverage <- regional_summary(sp_coverage,
+#                                   regions = bcr,
+#                                   region_name = "strata_name")
+#
+# ann_tmp <- bcr_coverage$regional_annual_coverage_estimate %>%
+#   filter(coverage) %>%
+#   mutate(region_type = "bcr")
+#
+# ann_coverage <- bind_rows(ann_coverage,ann_tmp)
+#
+#
+# bcr_by_country_coverage <- regional_summary(sp_coverage,
+#                                  regions = bcr_by_country,
+#                                  region_name = "strata_name")
+# ann_tmp <- bcr_by_country_coverage$regional_annual_coverage_estimate %>%
+#   filter(coverage) %>%
+#   mutate(region_type = "bcr_by_country")
+#
+# ann_coverage <- bind_rows(ann_coverage,ann_tmp)
+#
+# prov_state_coverage <- regional_summary(sp_coverage,
+#                                  regions = prov_state,
+#                                  region_name = "strata_name")
+#
+# ann_tmp <- prov_state_coverage$regional_annual_coverage_estimate %>%
+#   filter(coverage) %>%
+#   mutate(region_type = "prov_state")
+#
+# ann_coverage <- bind_rows(ann_coverage,ann_tmp)
+#
+#
+# country_coverage <- regional_summary(sp_coverage,
+#                                      regions = country,
+#                                      region_name = "strata_name")
+#
+# continent_coverage <- regional_summary(sp_coverage,
+#                                      regions = continent,
+#                                      region_name = "strata_name")
+#
+
+#
+# start_locs <- survey_data %>%
+#   select(latitude,longitude,strata_name) %>%
+#   distinct() %>%
+#   sf::st_as_sf(.,coords = c("longitude","latitude"),
+#                crs = 4326)
+#
+#
+# comp_plot <- ggplot()+
+#   geom_sf(data = strat_coverage$regional_cumulative_coverage_map,
+#           aes(fill = coverage),alpha = 0.6)+
+#   geom_sf(data = strata,aes(colour = strata_name),fill = NA)+
+#   geom_sf(data = start_locs, aes(colour = strata_name),
+#           size = 1)+
+#   theme(legend.position = "none")
+# comp_plot
 
 # country_coverage <- regional_summary(sp_coverage,
 #                                      regions = countries,
 #                                      region_name = "sovereignt")
 
-saveRDS(strat_coverage,paste0("coverage/coverage_",ttime,"_",aou,".rds"))
 
 
-}
+} # end of ttime loop
 
-}
+} #end of species loop
+
+
+
+parallel::stopCluster(cluster)
+
 
