@@ -5,7 +5,7 @@ library(foreach)
 library(doParallel)
 library(patchwork)
 
-YYYY <- 2022
+YYYY <- 2023
 short_time <- 10
 
 #setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2023_BBS_Analyses")
