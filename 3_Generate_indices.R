@@ -18,8 +18,15 @@ n_cores = 10 # if desired, can be run in parallel across many species
 re_run <- FALSE # if TRUE will recalculate and overwrite previous saved indices for each species
 # if FALSE, will skip species with saved indices files
 
-sp_list <- readRDS("species_list.rds") %>%
+sp_list <- readRDS("species_list_w_generations.rds") %>%
   filter(model == TRUE)
+
+# final list of species where model did not converge (Eastern Screech Owl)
+sp_drop <- readRDS("species_rerun_converge_fail_2024-12-11.rds")
+# list of species for which the gam model was run because gamye would not converge
+# includes American Goshawk, Eastern Screech-Owl, and Sharp-shinned Hawk
+sp_gam <- readRDS("species_rerun_converge_fail_2024-12-04.rds")
+
 
 regs_to_estimate <- c("continent","country","prov_state","bcr","bcr_by_country","stratum")
 
@@ -43,6 +50,10 @@ test <- foreach(i = order_random,
  #for(i in rev(1:nrow(sp_list))){
     sp <- as.character(sp_list[i,"english"])
     aou <- as.integer(sp_list[i,"aou"])
+
+
+    if(sp %in% sp_drop){next}
+
 
     if(file.exists(paste0(output_dir,"/fit_",aou,".rds")) &
        (!file.exists(paste0("Indices/Inds_",aou,".rds")) | re_run)){

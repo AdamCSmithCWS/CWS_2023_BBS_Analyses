@@ -19,6 +19,7 @@ re_fit <- TRUE# set to TRUE if re-running poorly converged models
 if(re_fit){
   #sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_",as_date(Sys.Date()),".rds"))
   sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
+  sp_re_fit <- c("Wood Duck", "Red-headed Woodpecker", "Scarlet Tanager", "Yellow-billed Magpie")
 }
 
 miss <- FALSE
@@ -61,7 +62,7 @@ if(re_fit){
 # i <- which(sp_list$aou == 6882)
 # build cluster -----------------------------------------------------------
 
-n_cores = 3
+n_cores = 4
 #n_cores <- floor(parallel::detectCores()/4)-1
 
 cluster <- makeCluster(n_cores, type = "PSOCK")
@@ -167,24 +168,24 @@ if(re_fit){
   #   prepare_model(model = "gam",
   #                 model_variant = "spatial")
 
-  bbs_dat <- prepare_spatial(s,
-                             strata_map = load_map(strat)) %>%
-    prepare_model(.,
-                  model = "gamye",
-                  model_variant = "spatial",
-                  model_file = "models_alt/gamye_spatial_bbs_CV_COPY.stan")
+  # bbs_dat <- prepare_spatial(s,
+  #                            strata_map = load_map(strat)) %>%
+  #   prepare_model(.,
+  #                 model = "gamye",
+  #                 model_variant = "spatial",
+  #                 model_file = "models_alt/gamye_spatial_bbs_CV_COPY.stan")
 
 fit <- run_model(model_data = bbs_dat,
                  refresh = 400,
                  iter_warmup = 6000,
                  iter_sampling = 4000,
                  thin = 4,
-                 #output_dir = output_dir,
+                 output_dir = output_dir,
                  #output_basename = paste0("fit_gam_",aou),
                  output_basename = paste0("fit_",aou),
                  save_model = FALSE,
                  overwrite = write_over,
-                 show_exceptions = TRUE,
+                 show_exceptions = FALSE,
                  init_alternate = 1)
 
 # Summ <- fit$model_fit$summary()

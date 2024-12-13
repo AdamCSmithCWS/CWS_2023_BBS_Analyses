@@ -22,9 +22,9 @@ re_run <- TRUE # set to TRUE if re-assessing convergence of models
 
 sp_list <- readRDS("species_list.rds") %>%
   filter(model == TRUE)
-sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
-sp_list <- sp_list %>%
-  filter(english %in% sp_re_fit)
+# sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
+# sp_list <- sp_list %>%
+#   filter(english %in% sp_re_fit)
 
 
 # build cluster -----------------------------------------------------------
@@ -41,7 +41,7 @@ test <- foreach(i = rev(1:nrow(sp_list)),
                 .errorhandling = "pass") %dopar%
   {
 
-     for(i in 1:3){
+     for(i in 1:4){
     sp <- as.character(sp_list[i,"english"])
     aou <- as.integer(sp_list[i,"aou"])
 
@@ -170,8 +170,8 @@ ess_fail_rerun <- ess_fail_sum %>%
   filter(p_fail >= 0.01 | (p_fail > 0 & grepl("^n",variable_type)))
 
 ### one off decision to not re-run RWBL - ess-fail only for 1.2% of the strata-intercepts (2/163)
-# ess_fail_rerun <- ess_fail_rerun %>%
-#   filter(species != "Red-winged Blackbird")
+ess_fail_rerun <- ess_fail_rerun %>%
+  filter(species != "Red-winged Blackbird")
 
 
 paste(unique(ess_fail_rerun[,c("sp_n","species")]),collapse = ", ")
@@ -215,6 +215,7 @@ species_re_run_combined <- unique(c(unique(rhat_fail_rerun$species),
 
 saveRDS(species_re_run_combined,
         file = paste0("species_rerun_converge_fail_",as_date(Sys.Date()),".rds"))
+
 
 # copy_model_file("gamye","spatial",
 #                 dir = "models_alt")
