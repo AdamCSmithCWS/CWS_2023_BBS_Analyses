@@ -5,11 +5,15 @@ library(foreach)
 library(doParallel)
 library(patchwork)
 
-YYYY <- 2022
+YYYY <- 2023
 short_time <- 12
 
-#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2022_BBS_Analyses")
-setwd("C:/GitHub/CWS_2022_BBS_Analyses")
+#setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2023_BBS_Analyses")
+#setwd("C:/GitHub/CWS_2023_BBS_Analyses")
+
+
+output_dir <- "F:/CWS_2023_BBS_Analyses/output"
+external_dir <- "F:/CWS_2023_BBS_Analyses"
 
 
 # custom functions to calculate reliability categories and determine website inclusion
@@ -19,32 +23,19 @@ source("functions/reliability.R")
 
 
 output_dir <- "output"
-n_cores = 16
-re_run <- FALSE #set to TRUE to overwrite any previous output from this script
+n_cores = 10
+re_run <- TRUE #set to TRUE to overwrite any previous output from this script
 
 
-sp_list <- readRDS("species_list.rds") %>%
+sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
 
 regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
 
 # load previous coverage data -----------------------------------------------------------
 
-lastyear = read_csv("data/All_2021_BBS_trends.csv")
-covs = lastyear[,c("species","bbs_num","Region","Region_alt","Trend_Time","reliab.cov")] %>%
-  mutate(Region = ifelse(Region == "Continental","continent",Region),
-         Region = ifelse(Region_alt == "Canada","Canada",Region),
-         Region = ifelse(Region == "US","United States of America",Region))
+lastyear = read_csv("data/All_BBS_trends_2022.csv")
 
-
-three_gens <- read_csv("data/full_bbs_species_list_w_generation_length.csv")
-
-three_gens <- three_gens %>%
-  select(aou,GenLength)
-
-sp_list <- sp_list %>%
-  inner_join(.,three_gens,
-             by = c("aou"))
 
 
 
@@ -96,12 +87,10 @@ test <- foreach(i = rev(c(1:nrow(sp_list))),
     species_f_bil <- gsub(paste(esp,sp),pattern = "[[:space:]]|[[:punct:]]",
                           replacement = "_")
 
-    cov_sp <- covs %>%
-      filter(bbs_num == aou)
 
-    if(file.exists(paste0("Indices/Inds_",aou,".rds")) &
-       file.exists(paste0("Figures/temp_rds_storage/",aou,"_highlevel_simple_trajs.RDS")) &
-       (!file.exists(paste0("Trends/Rolling_trends/",aou,"_rolling_trends.rds")) | re_run)){
+    if(file.exists(paste0(external_dir,"/Indices/Inds_",aou,".rds")) &
+       file.exists(paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_highlevel_simple_trajs.RDS")) &
+       (!file.exists(paste0(external_dir,"/Trends/Rolling_trends/",aou,"_rolling_trends.rds")) | re_run)){
 
 
 
@@ -122,7 +111,7 @@ test <- foreach(i = rev(c(1:nrow(sp_list))),
       gen3 <- min((YYYY-fy),max(10,round(as.numeric(sp_list[i,"GenLength"])*3)))
 
 
-      inds <- readRDS(paste0("Indices/Inds_",aou,".rds"))
+      inds <- readRDS(paste0(external_dir,"/Indices/Inds_",aou,".rds"))
 
 
 # Rolling trend calculations by three-generations -------------------------
@@ -132,10 +121,10 @@ test <- foreach(i = rev(c(1:nrow(sp_list))),
 
       roll_trends_out <- NULL
 
-      trajs <- readRDS(paste0("Figures/temp_rds_storage/",aou,"_highlevel_simple_trajs.RDS"))
+      trajs <- readRDS(paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_highlevel_simple_trajs.RDS"))
 
 
-      pdf(paste0("trends/rolling_trend_maps/",species_f_bil,"_rolling_trend_map.pdf"),
+      pdf(paste0(external_dir,"/trends/rolling_trend_maps/",species_f_bil,"_rolling_trend_map.pdf"),
           height = 11,
           width = 8.5)
 
@@ -184,7 +173,7 @@ roll_trends_out <- roll_trends_out%>%
   mutate(across(where(is.double) & !contains("year") &
                   !starts_with("n_") & !starts_with("bbs_num"),~signif(.,3)))
 
-saveRDS(roll_trends_out, file = paste0("Trends/Rolling_trends/",aou,"_rolling_trends.rds"))
+saveRDS(roll_trends_out, file = paste0(external_dir,"/Trends/Rolling_trends/",aou,"_rolling_trends.rds"))
 
 #write_csv(roll_trends_out,file = paste0("Trends/Rolling_trends/",aou,"_14-year_rolling_trends.csv"))
 thresh30 = (0.7^(1/gen3)-1)*100
@@ -192,7 +181,7 @@ thresh50 = (0.5^(1/gen3)-1)*100
 
 # plot rolling trend values against thresholds ----------------------------
 
-pdf(paste0("trends/rolling_trend_graphs/",species_f_bil,"_rolling_trends.pdf"),
+pdf(paste0(external_dir,"/trends/rolling_trend_graphs/",species_f_bil,"_rolling_trends.pdf"),
     width = 11,
     height = 8.5)
 regs <- roll_trends_out %>%

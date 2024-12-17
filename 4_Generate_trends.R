@@ -9,13 +9,15 @@ YYYY <- 2023
 short_time <- 10
 
 #setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2023_BBS_Analyses")
-setwd("C:/github/CWS_2023_BBS_Analyses")
+#setwd("C:/github/CWS_2023_BBS_Analyses")
 
 
 # custom functions to calculate reliability categories and determine website inclusion
 source("functions/web_trends.R")
 source("functions/reliability.R")
 
+output_dir <- "F:/CWS_2023_BBS_Analyses/output"
+external_dir <- "F:/CWS_2023_BBS_Analyses"
 
 
 n_cores <- 10
@@ -73,8 +75,8 @@ test <- foreach(i = rev(1:nrow(sp_list)),
 
 
 
-    if(file.exists(paste0("Indices/Inds_",aou,".rds")) &
-       (!file.exists(paste0("Trends/",aou,"_trends.rds")) | re_run)){
+    if(file.exists(paste0(external_dir,"/Indices/Inds_",aou,".rds")) &
+       (!file.exists(paste0(external_dir,"/Trends/",aou,"_trends.rds")) | re_run)){
 
 
 
@@ -95,9 +97,9 @@ test <- foreach(i = rev(1:nrow(sp_list)),
       gen3 <- min((YYYY-fy),max(10,round(as.numeric(sp_list[i,"GenLength"])*3)))
 
 
-      inds <- readRDS(paste0("Indices/Inds_",aou,".rds"))
+      inds <- readRDS(paste0(external_dir,"/Indices/Inds_",aou,".rds"))
 
-      ind <- readRDS(paste0("Indices/Ind_plot_",aou,".rds"))
+      ind <- readRDS(paste0(external_dir,"/Indices/Ind_plot_",aou,".rds"))
 
 
 # Estimate trends for long- short- and three-gen --------------------------
@@ -124,8 +126,10 @@ test <- foreach(i = rev(1:nrow(sp_list)),
 
       for(j in names(start_years)){
         ssy <- start_years[j]
-
-        cov_sp_y <- readRDS(paste0("coverage/coverage_",j,"_",aou,".rds")) %>%
+        coverage_exists <- FALSE
+        if(file.exists(paste0(external_dir,"/coverage/coverage_",j,"_",aou,".rds"))){
+          coverage_exists <- TRUE
+        cov_sp_y <- readRDS(paste0(external_dir,"/coverage/coverage_",j,"_",aou,".rds")) %>%
           mutate(summary_region = ifelse(region_type == "bcr",
                                          gsub(summary_region,
                                               pattern = "BCR",
@@ -134,7 +138,7 @@ test <- foreach(i = rev(1:nrow(sp_list)),
                  reliab.cov = proportion_of_region) %>%
           select(summary_region,reliab.cov,region_type)
 
-
+}
 
 
         trends_tmp <- generate_trends(inds,
@@ -166,7 +170,7 @@ test <- foreach(i = rev(1:nrow(sp_list)),
 
 
 
-
+if(coverage_exists){
           trend_sv <- trends_tmp$trends %>%
             mutate(species = sp,
                    espece = esp,
@@ -175,7 +179,15 @@ test <- foreach(i = rev(1:nrow(sp_list)),
                    for_web = for_web_func(strata_included,strata_excluded)) %>%
             left_join(.,cov_sp_y,by = c("region" = "summary_region",
                                      "region_type"))
-
+}else{
+  trend_sv <- trends_tmp$trends %>%
+    mutate(species = sp,
+           espece = esp,
+           bbs_num = aou,
+           trend_time = j,
+           for_web = for_web_func(strata_included,strata_excluded)) %>%
+    mutate(reliab.cov = NA)
+}
 
 
         trends_out <- bind_rows(trends_out,trend_sv)
@@ -219,13 +231,13 @@ test <- foreach(i = rev(1:nrow(sp_list)),
         mutate(across(where(is.double) & !contains("year") &
                         !starts_with("n_") & !starts_with("bbs_num"),~signif(.,3)))
 
-      saveRDS(trends_out, file = paste0("Trends/",aou,"_trends.rds"))
+      saveRDS(trends_out, file = paste0(external_dir,"/Trends/",aou,"_trends.rds"))
 
-      saveRDS(inds_out, file = paste0("Indices/list_",aou,"_indices.rds"))
+      saveRDS(inds_out, file = paste0(external_dir,"/Indices/list_",aou,"_indices.rds"))
 
 
-    saveRDS(maps_out,file = paste0("Figures/temp_rds_storage/",aou,"_maps.RDS"))
-    saveRDS(maps_out_quart,file = paste0("Figures/temp_rds_storage/",aou,"_quart_maps.RDS"))
+    saveRDS(maps_out,file = paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_maps.RDS"))
+    saveRDS(maps_out_quart,file = paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_quart_maps.RDS"))
 
 
     }

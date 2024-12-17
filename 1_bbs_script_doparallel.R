@@ -14,7 +14,7 @@ output_dir <- "D:/CWS_2023_BBS_Analyses/output"
 #output_dir <- "output"
 
 write_over <- TRUE # set to TRUE if overwriting previously run models
-re_fit <- TRUE# set to TRUE if re-running poorly converged models
+re_fit <- FALSE# set to TRUE if re-running poorly converged models
 
 if(re_fit){
   #sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_",as_date(Sys.Date()),".rds"))
@@ -115,9 +115,21 @@ test <- foreach(i = rev(1:nrow(sp_list)),
               quiet = TRUE) %>%
   prepare_data(min_max_route_years = 2,
                quiet = TRUE,
-               min_year = fy)#,
-               #min_n_routes = 1)
+               min_year = fy)
 
+   if("CA-NU-3" %in% s$meta_strata$strata_name){
+     strat_alt <- load_map(strat) %>%
+       filter(bcr != 3)
+     s <- stratify(by = strat,
+                   strata_custom = strat_alt,
+                   release = 2024,
+                   species = sp,
+                   quiet = TRUE) %>%
+       prepare_data(min_max_route_years = 2,
+                    quiet = TRUE,
+                    min_year = fy)
+
+   }
    ## bbsBayes2 models do not currently work unless n_strata > 1
    if(nrow(s$meta_strata) == 1){stop(paste("Only 1 stratum for",sp,"skipping to next species"))}
 
