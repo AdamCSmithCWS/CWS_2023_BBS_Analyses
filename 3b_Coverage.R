@@ -12,6 +12,7 @@ library(tidyverse)
 library(ebirdst)
 #ebirdst::set_ebirdst_access_key("t9el4omae1c3",overwrite = TRUE)
 
+external_dir <- "F:/CWS_2023_BBS_Analyses"
 
 db <- load_map("latlong") %>%
   rename(grid_cell_name = strata_name,
@@ -81,8 +82,14 @@ sp_list <- sp_list %>%
 
 redo_generations <- FALSE
 re_naturecounts <- FALSE
+if(re_naturecounts){
 gen_years_all <- naturecounts::nc_query_table(table = "SpeciesLifeHistory") %>%
   filter(subcategDescr == "Average generation length (years)")
+saveRDS(gen_years_all,paste("data/all_naturecounts_generation_data.rds"))
+}else{
+  gen_years_all <- readRDS(paste("data/all_naturecounts_generation_data.rds"))
+}
+
 if(redo_generations){
 if(re_naturecounts){
 
@@ -222,57 +229,19 @@ test <- foreach(i = rev(1:nrow(sp_list_gen)),
   aou <- as.integer(sp_list_gen[i,"aou"])
   strat <- "bbs_cws"
   three_g <- max(c(10,round(as.numeric(sp_list_gen[i,"GenLength"])*3)))
-#     #   print(paste(sp,aou))
-#     # }
-#     # }
-#     # identifying first years for selected species ----------------------------
-#     fy <- 1970
-#     if(aou %in% c(4661,4660)){ #Alder and Willow Flycatcher
-#       fy <- 1978 #5 years after the split
-#     }
-#     if(aou %in% c(10,11,22860)){ # Clark's and Western Grebe and EUCD
-#       fy <- 1990 #5 years after the split and first year EUCD observed on > 3 BBS routes
-#     }
-#     if(aou == 6121){ # CAve Swallow
-#       fy = 1985
-#     }
-#
-#
-#   s <- stratify(by = strat,
-#                 release = 2024,
-#                 species = sp_sel,
-#                 quiet = TRUE) %>%
-#     prepare_data(min_max_route_years = 2,
-#                  quiet = TRUE,
-#                  min_year = fy)
-#
-#   survey_data <- s$raw_data %>%
-#     select(route,latitude,longitude,year)
-#
-#
-#  sp_coverage <- overlay_range_data(range = range_info,
-#                                       survey_sites = survey_data,
-#                                       sites = "route",
-#                                       years = "year",
-#                                       x_coord = "longitude",
-#                                       y_coord = "latitude",
-#                                       crs_site_coordinates = 4326,
-#                                       add_survey_sites_to_range = TRUE)
-#
-# strat_coverage <- regional_summary(sp_coverage,
-#                              regions = strata,
-#                              region_name = "strata_name")
-#
-# # country_coverage <- regional_summary(sp_coverage,
-# #                                      regions = countries,
-# #                                      region_name = "sovereignt")
-#
-# saveRDS(strat_coverage,paste0("coverage/coverage_",aou,".rds"))
-#
 
 
 # coverage by trend-period ----------------------------------------------
 
+  raw <- readRDS(paste0(external_dir,"/Raw_data/Raw_",aou,".rds"))
+  strat <- "bbs_cws"
+
+  # s <- stratify(by = strat,
+  #               release = 2024,
+  #               species = sp_sel,
+  #               quiet = TRUE) %>%
+  #   prepare_data(min_max_route_years = 2,
+  #                quiet = TRUE)
 
 for(ttime in c("Long-term","Short-term","Three-generation")){
 
@@ -294,18 +263,10 @@ if(aou == 6121){ # CAve Swallow
   fy <- max(c(fy,1985))
 }
 
-strat <- "bbs_cws"
 
-s <- stratify(by = strat,
-              release = 2024,
-              species = sp_sel,
-              quiet = TRUE) %>%
-  prepare_data(min_max_route_years = 2,
-               quiet = TRUE,
-               min_year = fy)
-
-survey_data <- s$raw_data %>%
-  select(route,latitude,longitude,year,strata_name)
+survey_data <- raw %>%
+  select(route,latitude,longitude,year,strata_name) %>%
+  filter(year >= fy)
 
 
 sp_coverage <- overlay_range_data(range = range_info,
@@ -317,7 +278,7 @@ sp_coverage <- overlay_range_data(range = range_info,
                                   crs_site_coordinates = 4326,
                                   add_survey_sites_to_range = TRUE)
 
-saveRDS(sp_coverage,paste0("coverage/coverage_maps_",ttime,"_",aou,".rds"))
+saveRDS(sp_coverage,paste0(external_dir,"/coverage/coverage_maps_",ttime,"_",aou,".rds"))
 
 ann_coverage <- NULL
 cumulative_coverage <- NULL
@@ -348,69 +309,8 @@ tmp_coverage <- regional_summary(sp_coverage,
 
 # cover_save <- list(annual_coverage = ann_coverage,
 #                    cumulative_coverage = cumulative_coverage)
-saveRDS(cumulative_coverage,paste0("coverage/coverage_",ttime,"_",aou,".rds"))
+saveRDS(cumulative_coverage,paste0(external_dir,"/coverage/coverage_",ttime,"_",aou,".rds"))
 #
-# bcr_coverage <- regional_summary(sp_coverage,
-#                                   regions = bcr,
-#                                   region_name = "strata_name")
-#
-# ann_tmp <- bcr_coverage$regional_annual_coverage_estimate %>%
-#   filter(coverage) %>%
-#   mutate(region_type = "bcr")
-#
-# ann_coverage <- bind_rows(ann_coverage,ann_tmp)
-#
-#
-# bcr_by_country_coverage <- regional_summary(sp_coverage,
-#                                  regions = bcr_by_country,
-#                                  region_name = "strata_name")
-# ann_tmp <- bcr_by_country_coverage$regional_annual_coverage_estimate %>%
-#   filter(coverage) %>%
-#   mutate(region_type = "bcr_by_country")
-#
-# ann_coverage <- bind_rows(ann_coverage,ann_tmp)
-#
-# prov_state_coverage <- regional_summary(sp_coverage,
-#                                  regions = prov_state,
-#                                  region_name = "strata_name")
-#
-# ann_tmp <- prov_state_coverage$regional_annual_coverage_estimate %>%
-#   filter(coverage) %>%
-#   mutate(region_type = "prov_state")
-#
-# ann_coverage <- bind_rows(ann_coverage,ann_tmp)
-#
-#
-# country_coverage <- regional_summary(sp_coverage,
-#                                      regions = country,
-#                                      region_name = "strata_name")
-#
-# continent_coverage <- regional_summary(sp_coverage,
-#                                      regions = continent,
-#                                      region_name = "strata_name")
-#
-
-#
-# start_locs <- survey_data %>%
-#   select(latitude,longitude,strata_name) %>%
-#   distinct() %>%
-#   sf::st_as_sf(.,coords = c("longitude","latitude"),
-#                crs = 4326)
-#
-#
-# comp_plot <- ggplot()+
-#   geom_sf(data = strat_coverage$regional_cumulative_coverage_map,
-#           aes(fill = coverage),alpha = 0.6)+
-#   geom_sf(data = strata,aes(colour = strata_name),fill = NA)+
-#   geom_sf(data = start_locs, aes(colour = strata_name),
-#           size = 1)+
-#   theme(legend.position = "none")
-# comp_plot
-
-# country_coverage <- regional_summary(sp_coverage,
-#                                      regions = countries,
-#                                      region_name = "sovereignt")
-
 
 
 } # end of ttime loop

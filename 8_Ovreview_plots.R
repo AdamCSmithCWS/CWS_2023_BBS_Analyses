@@ -82,7 +82,7 @@ pdf(file = paste0("Figures/BBS_High_level_summary_",YYYY,".pdf"),
     height = 9,
     width = 17)
 
-for(jj in (1:nrow(species_to_run))){
+for(jj in (411:nrow(species_to_run))){
 
   species <- as.character(species_to_run[jj,"english"])
   espece <- as.character(species_to_run[jj,"french"])
@@ -158,7 +158,7 @@ dev.off()
 
 # Plotting trend maps -----------------------------------------------------
 
-
+re_run <- FALSE
 
 start_years <- c("Long-term","Short-term","Three-generation")
 
@@ -181,14 +181,16 @@ test <- foreach(jj = rev(c(1:nrow(species_to_run))),
   espece <- as.character(species_to_run[jj,"french"])
   aou <- as.integer(species_to_run[jj,"aou"])
 
-  if(file.exists(paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_maps.RDS"))){
+  if(file.exists(paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_maps.RDS")) &
+     (!file.exists(paste0(external_dir,"/Figures/trend_maps/",species_f_bil,"_trend_maps.pdf")) |
+      re_run)){
     species_f_bil <- gsub(paste(species,espece),pattern = "[[:space:]]|[[:punct:]]",
                           replacement = "_")
 
     tmaps <- readRDS(paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_maps.RDS"))
     qmaps <- readRDS(paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_quart_maps.RDS"))
 
-    pdf(paste0("Figures/trend_maps/",species_f_bil,"_trend_maps.pdf"),
+    pdf(paste0(external_dir,"/Figures/trend_maps/",species_f_bil,"_trend_maps.pdf"),
         width = 11,
         height = 8.5)
 

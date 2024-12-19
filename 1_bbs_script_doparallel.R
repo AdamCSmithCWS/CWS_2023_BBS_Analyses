@@ -14,12 +14,13 @@ output_dir <- "D:/CWS_2023_BBS_Analyses/output"
 #output_dir <- "output"
 
 write_over <- TRUE # set to TRUE if overwriting previously run models
-re_fit <- FALSE# set to TRUE if re-running poorly converged models
+re_fit <- TRUE# set to TRUE if re-running poorly converged models
 
 if(re_fit){
   #sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_",as_date(Sys.Date()),".rds"))
   sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
   sp_re_fit <- c("Wood Duck", "Red-headed Woodpecker", "Scarlet Tanager", "Yellow-billed Magpie")
+  sp_re_fit <- c("Canada Goose","Savannah Sparrow","Horned Lark")
 }
 
 miss <- FALSE
@@ -62,7 +63,7 @@ if(re_fit){
 # i <- which(sp_list$aou == 6882)
 # build cluster -----------------------------------------------------------
 
-n_cores = 4
+n_cores = 3
 #n_cores <- floor(parallel::detectCores()/4)-1
 
 cluster <- makeCluster(n_cores, type = "PSOCK")
