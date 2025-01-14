@@ -16,7 +16,7 @@ output_dir <- "D:/CWS_2023_BBS_Analyses/output"
 
 
 
-n_cores = 4
+n_cores = 6
 re_run <- TRUE # set to TRUE if re-assessing convergence of models
 
 
@@ -25,6 +25,13 @@ sp_list <- readRDS("species_list.rds") %>%
 # sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
 # sp_list <- sp_list %>%
 #   filter(english %in% sp_re_fit)
+
+sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+              "Common Loon",
+              "American Pipit",
+              "Redpoll (Common/Hoary)")
+sp_list <- sp_list %>%
+  filter(english %in% sp_rerun)
 
 
 # build cluster -----------------------------------------------------------
@@ -41,7 +48,7 @@ test <- foreach(i = rev(1:nrow(sp_list)),
                 .errorhandling = "pass") %dopar%
   {
 
-     for(i in 1:4){
+     #for(i in 1:4){
     sp <- as.character(sp_list[i,"english"])
     aou <- as.integer(sp_list[i,"aou"])
 
@@ -78,6 +85,9 @@ test <- foreach(i = rev(1:nrow(sp_list)),
 
 
 parallel::stopCluster(cluster)
+
+sp_list <- readRDS("species_list.rds") %>%
+  filter(model == TRUE)
 
 
 # Compile convergence values ----------------------------------------------
@@ -156,6 +166,7 @@ sp_fail_ess <- fail_ess %>%
   select(species) %>%
   distinct() %>%
   unlist()
+
 ess_fail_sum <- fail_ess %>%
   filter(species %in% sp_fail_ess,
          !is.na(ess_fail)) %>%

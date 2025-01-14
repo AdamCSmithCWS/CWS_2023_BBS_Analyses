@@ -22,17 +22,26 @@ source("functions/reliability.R")
 
 
 
-output_dir <- "output"
-n_cores = 10
+#output_dir <- "output"
+n_cores = 6
 re_run <- TRUE #set to TRUE to overwrite any previous output from this script
 
 
 sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
 
+
+sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+              "Common Loon",
+              "American Pipit",
+              "Redpoll (Common/Hoary)")
+sp_list <- sp_list %>%
+  filter(english %in% sp_rerun)
+
+
 regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
 
-# load previous coverage data -----------------------------------------------------------
+# load previous trend data -----------------------------------------------------------
 
 lastyear = read_csv("data/All_BBS_trends_2022.csv")
 

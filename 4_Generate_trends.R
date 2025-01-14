@@ -20,7 +20,7 @@ output_dir <- "F:/CWS_2023_BBS_Analyses/output"
 external_dir <- "F:/CWS_2023_BBS_Analyses"
 
 
-n_cores <- 10
+n_cores <- 6
 re_run <- TRUE
 
 # species list that also includes generation length
@@ -29,6 +29,14 @@ re_run <- TRUE
 
 sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
+
+
+sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+              "Common Loon",
+              "American Pipit",
+              "Redpoll (Common/Hoary)")
+sp_list <- sp_list %>%
+  filter(english %in% sp_rerun)
 
 regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
 

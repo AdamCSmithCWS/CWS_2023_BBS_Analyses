@@ -10,6 +10,7 @@ library(SurveyCoverage)
 library(bbsBayes2)
 library(tidyverse)
 library(ebirdst)
+library(sf)
 #ebirdst::set_ebirdst_access_key("t9el4omae1c3",overwrite = TRUE)
 
 external_dir <- "F:/CWS_2023_BBS_Analyses"
@@ -21,6 +22,7 @@ db <- load_map("latlong") %>%
 qual_ebird <- ebirdst_runs
 
 ly <- max(bbsBayes2::load_bbs_data()$route$year)
+
 
 
 # load maps of regions ----------------------------------------------------
@@ -57,6 +59,7 @@ regs_maps <- list(continent = continent,
                   bcr = bcr,
                   stratum = stratum,
                   bcr_by_country = bcr_by_country)
+
 
 # Load three generation times from naturecounts ---------------------------
 
@@ -162,12 +165,50 @@ library(foreach)
 library(doParallel)
 
 sp_list_gen <- readRDS("sp_list_w_generations.rds")
-n_cores = 12
+
+sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+              "Common Loon",
+              "American Pipit",
+              "Redpoll (Common/Hoary)")
+sp_list_gen <- sp_list_gen %>%
+  filter(english %in% sp_rerun)
+
+
+# load BOTW range maps ----------------------------------------------------
+re_do_botw <- FALSE
+
+if(re_do_botw){
+botw_all <- readRDS("data/BOTW_valid.rds")
+
+continent_alt <- continent %>%
+  sf::st_transform(crs = sf::st_crs(botw_all))
+
+botw_sp_sel <- botw_all %>%
+  filter(sci_name %in% sp_list_gen$naturecounts_scientific_name)
+
+
+botw_seas <- botw_sp_sel %>%
+  filter(seasonal %in% c(1,2),
+         presence %in% c(1:3))
+# %>%
+  #sf::st_make_valid()
+
+saveRDS(botw_seas,"data/botw_seas.rds")
+
+}else{
+botw_seas <- readRDS("data/botw_seas.rds")
+}
+
+
+
+
+n_cores = 6
 #n_cores <- floor(parallel::detectCores()/4)-1
 
 cluster <- makeCluster(n_cores, type = "PSOCK")
 registerDoParallel(cluster)
 
+re_run <- FALSE
 
 test <- foreach(i = rev(1:nrow(sp_list_gen)),
                 .packages = c("bbsBayes2",
@@ -180,6 +221,12 @@ test <- foreach(i = rev(1:nrow(sp_list_gen)),
 #for(i in rev(1:nrow(sp_list_gen))){
 
   sp_sel <- unname(unlist(sp_list_gen[i,"english"]))
+  aou <- as.integer(sp_list_gen[i,"aou"])
+
+  if(all(file.exists(paste0(external_dir,"/coverage/coverage_maps_",c("Long-term","Short-term","Three-generation"),"_",aou,".rds"))) & !re_run){
+    #sp_list_gen[i,"eBird_range_data"] <- "Used"
+    #next
+    }
 
   # filter(n_routes_w_obs > 19,
   #                 !is.na(english),
@@ -193,6 +240,8 @@ test <- foreach(i = rev(1:nrow(sp_list_gen)),
 
   if(sp_sel == "Western Grebe (Clark's/Western)"){next} # avoiding confusion with true Western Grebe
 
+print(sp_sel)
+
   sp_sel1 <- ifelse(grepl(pattern = " \\(",
                          sp_sel),
                    str_extract(string = sp_sel,pattern = ".*(?= \\()"),
@@ -200,15 +249,66 @@ test <- foreach(i = rev(1:nrow(sp_list_gen)),
 
 
   sp_ebird <- ebirdst::get_species(sp_sel1)
-  if(is.na(sp_ebird)){
-    sp_list_gen[i,"eBird_range_data"] <- "Not a species"
 
-    next
+  if(sp_sel == "Cattle Egret"){
+    sp_sel1 <- "Western/Eastern Cattle Egret"
+
+
+    sp_ebird <- ebirdst::get_species(sp_sel1)
+
   }
+
+  if(is.na(sp_ebird) & !grepl(pattern = "*\\(",
+                             sp_sel1)){
+sp_sel1 <- unname(unlist(sp_list_gen[i,"naturecounts_english_name"]))
+sp_ebird <- ebirdst::get_species(sp_sel1)
+
+  }
+
+  if(is.na(sp_ebird) & !grepl(pattern = "*\\(",
+                              sp_sel1)){
+    sp_sel1 <- unname(unlist(sp_list_gen[i,"naturecounts_scientific_name"]))
+    sp_ebird <- ebirdst::get_species(sp_sel1)
+
+  }
+
+  # if no eBird range data, then try BOTW data
+    if(is.na(sp_ebird) & !grepl(pattern = "*\\(",
+                                sp_sel1)){
+
+    sp_list_gen[i,"eBird_range_data"] <- "Not available"
+
+
+# search for botw range map -----------------------------------------------
+
+    sp_sci <- unname(unlist(sp_list_gen[i,"naturecounts_scientific_name"]))
+    range_map_botw <- botw_seas %>%
+      filter(sci_name == sp_sci) %>%
+      summarise()
+
+    if(st_is_empty(range_map_botw)){
+      sp_list_gen[i,"botw_range_data"] <- "Not available"
+      next
+    }
+    range_info <- try(grid_range(sp_sel1,
+                                 coverage_grid_custom = db,
+                                 range_map = range_map_botw),silent = TRUE)
+
+    sp_list_gen[i,"botw_range_data"] <- "Used"
+
+    range_map_botw <- NA
+
+  }else{
   qual_sel <- qual_ebird[which(qual_ebird$species_code == sp_ebird),]
   breed_qual <- unname(unlist(qual_sel[,"breeding_quality"]))
   resident_qual <- unname(unlist(qual_sel[,"resident_quality"]))
   resident <- unname(unlist(qual_sel[,"is_resident"]))
+
+  if(length(resident) == 0){
+    resident <- FALSE
+
+  }
+
 
   if(resident){
     season = "resident"
@@ -216,23 +316,56 @@ test <- foreach(i = rev(1:nrow(sp_list_gen)),
     season = "breeding"
   }
 
+
   range_info <- try(grid_range(sp_sel1,
                                coverage_grid_custom = db,
                                seasonal_range = season),silent = TRUE)
 
+  }
+# if no successful grid_range with eBird data, then try BOTW data
+  if(class(range_info) == "try-error" ){
+    #sp_list_gen[i,"eBird_range_data"] <- "failed"
+    # search for botw range map -----------------------------------------------
+if(!grepl(pattern = "*\\(",
+             sp_sel1)){
+    sp_sci <- unname(unlist(sp_list_gen[i,"naturecounts_scientific_name"]))
+    range_map_botw <- botw_seas %>%
+      filter(sci_name == sp_sci) %>%
+      summarise()
 
+    if(st_is_empty(range_map_botw)){
+      sp_list_gen[i,"botw_range_data"] <- "Not available"
+      next
+    }
+}else{
+  range_map_botw <- NA
+}
+    range_info <- try(grid_range(sp_sel1,
+                                 coverage_grid_custom = db,
+                                 range_map = range_map_botw),silent = TRUE)
+    sp_list_gen[i,"botw_range_data"] <- "Used"
+
+
+  }
+
+  # if still no range data skip to next species
   if(class(range_info) == "try-error"){
-    sp_list_gen[i,"eBird_range_data"] <- "failed"
-
+    sp_list_gen[i,"botw_range_data"] <- "failed"
     next}
 
-  aou <- as.integer(sp_list_gen[i,"aou"])
+#} # temp loop end
+
+
+
   strat <- "bbs_cws"
   three_g <- max(c(10,round(as.numeric(sp_list_gen[i,"GenLength"])*3)))
 
 
 # coverage by trend-period ----------------------------------------------
-
+if(!file.exists(paste0(external_dir,"/Raw_data/Raw_",aou,".rds"))){
+  sp_list_gen[i,"eBird_range_data"] <- "not modeled"
+  next
+}
   raw <- readRDS(paste0(external_dir,"/Raw_data/Raw_",aou,".rds"))
   strat <- "bbs_cws"
 
@@ -279,6 +412,16 @@ sp_coverage <- overlay_range_data(range = range_info,
                                   add_survey_sites_to_range = TRUE)
 
 saveRDS(sp_coverage,paste0(external_dir,"/coverage/coverage_maps_",ttime,"_",aou,".rds"))
+# cumulative_coverage_map <- basp_coverage$cumulative_coverage_map
+# overall_coverage_estimate <- basp_coverage$cumulative_coverage_estimate
+#
+# coverage_overall <- ggplot()+
+#   geom_sf(data = cumulative_coverage_map,
+#           aes(fill = coverage))+
+#   scale_fill_viridis_d()+
+#   labs(title = paste(example_species,"proportion covered = ",round(overall_coverage_estimate$coverage_proportion,2)))
+#
+# print(coverage_overall)
 
 ann_coverage <- NULL
 cumulative_coverage <- NULL
@@ -317,8 +460,118 @@ saveRDS(cumulative_coverage,paste0(external_dir,"/coverage/coverage_",ttime,"_",
 
 } #end of species loop
 
-
+#     sp_list_gen <- sp_list_gen %>%
+#       mutate(eBird_range_data = ifelse(is.na(botw_range_data),"used",eBird_range_data))
+# write_csv(sp_list_gen,"coverage/coverage_summary.csv")
 
 parallel::stopCluster(cluster)
 
 
+
+
+# exporting the coverage maps to pdf --------------------------------------
+
+
+
+
+
+
+library(SurveyCoverage)
+library(bbsBayes2)
+library(tidyverse)
+library(ebirdst)
+library(sf)
+#ebirdst::set_ebirdst_access_key("t9el4omae1c3",overwrite = TRUE)
+sp_list_gen <- readRDS("sp_list_w_generations.rds")
+
+external_dir <- "F:/CWS_2023_BBS_Analyses"
+
+db <- load_map("latlong") %>%
+  rename(grid_cell_name = strata_name,
+         area_km2 = area_sq_km)
+
+qual_ebird <- ebirdst_runs
+
+ly <- max(bbsBayes2::load_bbs_data()$route$year)
+
+strat <- "bbs_cws"
+
+base_map <- load_map(strat)
+
+for(i in rev(1:530)){#nrow(sp_list_gen))){
+
+  sp_sel <- unname(unlist(sp_list_gen[i,"english"]))
+  aou <- as.integer(sp_list_gen[i,"aou"])
+
+
+
+three_g <- max(c(10,round(as.numeric(sp_list_gen[i,"GenLength"])*3)))
+
+if(!any(file.exists(paste0(external_dir,"/coverage/coverage_maps_",c("Long-term","Short-term","Three-generation"),"_",aou,".rds")))){
+  next
+}
+
+# coverage by trend-period ----------------------------------------------
+if(!file.exists(paste0(external_dir,"/Raw_data/Raw_",aou,".rds"))){
+  next
+}
+raw <- readRDS(paste0(external_dir,"/Raw_data/Raw_",aou,".rds"))
+
+
+pdf(paste0("coverage_maps/coverage_maps_",aou,".pdf"))
+
+for(ttime in c("Long-term","Short-term","Three-generation")){
+
+  if(ttime == "Long-term"){fy <- 1966}
+  if(ttime == "Short-term"){fy <- ly-10}
+  if(ttime == "Three-generation"){
+
+    fy <- ly-three_g
+  }
+
+  if(!file.exists(paste0(external_dir,"/coverage/coverage_maps_",ttime,"_",aou,".rds"))){
+    next
+  }
+    sp_coverage <- readRDS(paste0(external_dir,"/coverage/coverage_maps_",ttime,"_",aou,".rds"))
+
+  if(aou %in% c(4661,4660)){ #Alder and Willow Flycatcher
+    fy <- max(c(fy,1978)) #5 years after the split
+  }
+  if(aou %in% c(10,11,22860)){ # Clark's and Western Grebe and EUCD
+    fy <- max(c(fy,1990))  #5 years after the split and first year EUCD observed on > 3 BBS routes
+  }
+  if(aou == 6121){ # CAve Swallow
+    fy <- max(c(fy,1985))
+  }
+
+survey_data <- raw %>%
+  select(route,latitude,longitude,year,strata_name) %>%
+  filter(year >= fy) %>%
+  group_by(route,strata_name,latitude,longitude) %>%
+  summarise(n_years = n(),
+            .groups = "drop") %>%
+  sf::st_as_sf(coords = c("longitude","latitude"))
+survey_data <- st_set_crs(survey_data, 4326)
+
+
+cumulative_coverage_map <- sp_coverage$cumulative_coverage_map
+overall_coverage_estimate <- sp_coverage$cumulative_coverage_estimate
+
+survey_data <- sf::st_transform(survey_data,crs = st_crs(cumulative_coverage_map))
+
+coverage_overall <- ggplot()+
+  geom_sf(data = cumulative_coverage_map,
+          aes(fill = coverage))+
+  geom_sf(data = survey_data,aes(colour = n_years), inherit.aes = FALSE,
+          size = 0.5)+
+  geom_sf(data = base_map, fill = NA)+
+  scale_fill_viridis_d(begin = 0.5, direction = -1)+
+  scale_colour_viridis_c(option = "F", direction = -1)+
+  labs(subtitle = paste(sp_sel,ttime,"\n coverage since ",fy," = ",round(overall_coverage_estimate$coverage_proportion,2)))
+
+print(coverage_overall)
+
+}
+dev.off()
+
+}#end species loop
