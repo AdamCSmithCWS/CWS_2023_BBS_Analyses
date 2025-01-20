@@ -58,7 +58,7 @@ sp_list <- readRDS("sp_list_w_generations.rds") %>%
 
 
 
-re_collect <- FALSE
+re_collect <- TRUE
 # Compile all trends and indices ------------------------------------------------------
 
 if(re_collect){

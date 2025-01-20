@@ -166,12 +166,12 @@ library(doParallel)
 
 sp_list_gen <- readRDS("sp_list_w_generations.rds")
 
-sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
-              "Common Loon",
-              "American Pipit",
-              "Redpoll (Common/Hoary)")
-sp_list_gen <- sp_list_gen %>%
-  filter(english %in% sp_rerun)
+# sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+#               "Common Loon",
+#               "American Pipit",
+#               "Redpoll (Common/Hoary)")
+# sp_list_gen <- sp_list_gen %>%
+#   filter(english %in% sp_rerun)
 
 
 # load BOTW range maps ----------------------------------------------------
@@ -202,19 +202,20 @@ botw_seas <- readRDS("data/botw_seas.rds")
 
 
 
-n_cores = 6
+n_cores = 15
 #n_cores <- floor(parallel::detectCores()/4)-1
 
 cluster <- makeCluster(n_cores, type = "PSOCK")
 registerDoParallel(cluster)
 
-re_run <- FALSE
+re_run <- TRUE
 
 test <- foreach(i = rev(1:nrow(sp_list_gen)),
                 .packages = c("bbsBayes2",
                               "tidyverse",
                               "ebirdst",
-                              "SurveyCoverage"),
+                              "SurveyCoverage",
+                              "sf"),
                 .errorhandling = "pass") %dopar%
   {
 
@@ -375,7 +376,12 @@ if(!file.exists(paste0(external_dir,"/Raw_data/Raw_",aou,".rds"))){
   #               quiet = TRUE) %>%
   #   prepare_data(min_max_route_years = 2,
   #                quiet = TRUE)
+  saveRDS(range_info,paste0(external_dir,"/coverage/range_map_coverage_",aou,".rds"))
 
+  if(all(file.exists(paste0(external_dir,"/coverage/coverage_maps_",c("Long-term","Short-term","Three-generation"),"_",aou,".rds")))){
+    #sp_list_gen[i,"eBird_range_data"] <- "Used"
+    next
+  }
 for(ttime in c("Long-term","Short-term","Three-generation")){
 
 if(ttime == "Long-term"){fy <- 1966}
@@ -498,10 +504,14 @@ strat <- "bbs_cws"
 
 base_map <- load_map(strat)
 
-for(i in rev(1:530)){#nrow(sp_list_gen))){
+for(i in rev(1:nrow(sp_list_gen))){
 
   sp_sel <- unname(unlist(sp_list_gen[i,"english"]))
   aou <- as.integer(sp_list_gen[i,"aou"])
+  esp <- as.character(sp_list_gen[i,"french"])
+  species_f_bil <- gsub(paste(esp,sp_sel),pattern = "[[:space:]]|[[:punct:]]",
+                        replacement = "_")
+
 
 
 
@@ -510,7 +520,8 @@ three_g <- max(c(10,round(as.numeric(sp_list_gen[i,"GenLength"])*3)))
 if(!any(file.exists(paste0(external_dir,"/coverage/coverage_maps_",c("Long-term","Short-term","Three-generation"),"_",aou,".rds")))){
   next
 }
-
+range_maps <- readRDS(paste0(external_dir,"/coverage/range_map_coverage_",aou,".rds"))
+range_map <- range_maps$range_map
 # coverage by trend-period ----------------------------------------------
 if(!file.exists(paste0(external_dir,"/Raw_data/Raw_",aou,".rds"))){
   next
@@ -518,7 +529,7 @@ if(!file.exists(paste0(external_dir,"/Raw_data/Raw_",aou,".rds"))){
 raw <- readRDS(paste0(external_dir,"/Raw_data/Raw_",aou,".rds"))
 
 
-pdf(paste0("coverage_maps/coverage_maps_",aou,".pdf"))
+pdf(paste0("coverage_maps/coverage_maps_",species_f_bil,".pdf"))
 
 for(ttime in c("Long-term","Short-term","Three-generation")){
 
@@ -559,15 +570,28 @@ overall_coverage_estimate <- sp_coverage$cumulative_coverage_estimate
 
 survey_data <- sf::st_transform(survey_data,crs = st_crs(cumulative_coverage_map))
 
+bb <- sf::st_bbox(cumulative_coverage_map)
+
 coverage_overall <- ggplot()+
   geom_sf(data = cumulative_coverage_map,
           aes(fill = coverage))+
   geom_sf(data = survey_data,aes(colour = n_years), inherit.aes = FALSE,
           size = 0.5)+
-  geom_sf(data = base_map, fill = NA)+
+  geom_sf(data = range_map, fill = NA, colour = "darkorange")+
+  geom_sf(data = base_map, fill = NA, colour = grey(0.5))+
+  coord_sf(xlim = bb[c("xmin","xmax")],
+           ylim = bb[c("ymin","ymax")])+
   scale_fill_viridis_d(begin = 0.5, direction = -1)+
-  scale_colour_viridis_c(option = "F", direction = -1)+
-  labs(subtitle = paste(sp_sel,ttime,"\n coverage since ",fy," = ",round(overall_coverage_estimate$coverage_proportion,2)))
+  scale_colour_viridis_c(option = "F", direction = -1, name = "Number of years \n with BBS counts")+
+  theme_bw()+
+  labs(subtitle = paste(sp_sel,ttime,"\n coverage since ",fy," = ",round(overall_coverage_estimate$coverage_proportion,2)*100,"% of the species' range"),
+       caption = "1-degree latitude by longitude grid-cells considered covered if they include
+       BBS observations from routes within that grid cell
+       and years included in the trend period.
+       The orange polygon outlines the species' breeding-season range based on eBird,
+       or Birds of the World range maps.
+       The points indicate start locations for included routes and their colour reflects
+       the number of annual surveys.")
 
 print(coverage_overall)
 

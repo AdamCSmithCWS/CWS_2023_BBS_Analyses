@@ -129,19 +129,64 @@ tplot <- ggplot(data = trends_1)+
 246
 "
 
+  tt_sel <- trends_1 %>%
+    filter(trend_time == "Long-term", version == "This year",
+           region == "continent")
+  main_title <- paste(species,espece,"continent long-term trend has",tt_sel$reliability,"overall reliability",
+                      ": coverage",tt_sel$reliab.cov*100,"% :", tt_sel$precision, "precision :",
+                      tt_sel$backcast_reliab,"local data ")
+
   if(is.null(trajs[[2]])){
+    tt_sel <- trends_1 %>%
+      filter(trend_time == "Long-term", version == "This year",
+             region %in% c("United States of America"))
+    main_caption <- paste("US long-term trend has",tt_sel$reliability,"overall reliability",
+                          ": coverage",tt_sel$reliab.cov*100,"% of the species' range :", tt_sel$precision, "precision :",
+                          tt_sel$backcast_reliab,"local data  :", tt_sel$n_routes,"routes total and ",
+                          tt_sel$mean_n_routes,"on average, each year: ","local data available for",tt_sel$backcast_flag*100,
+                          "% of the years and regions included")
+
     layt <- trajs[[1]] + trajs[[3]] + plot_spacer() +
       tplot + tmaps[[1]] + tmaps[[2]] +
       plot_layout(design = design,
                   guides = "collect",
-                  widths = 1)
+                  widths = 1)+
+      plot_annotation(title = main_title,
+                      caption = main_caption,
+                      theme = theme(plot.caption = element_text(size = 10),
+                                    plot.title = element_text(size = 12)))
+
+
   }else{
+
+    tt_sel <- trends_1 %>%
+      filter(trend_time == "Long-term", version == "This year",
+             region %in% c("Canada"))
+    can_title <- paste("Canada long-term trend has",tt_sel$reliability,"overall reliability",
+                       ": coverage",tt_sel$reliab.cov*100,"% of the species' range :", tt_sel$precision, "precision :",
+                       tt_sel$backcast_reliab,"local data :", tt_sel$n_routes,"routes total and",
+                       tt_sel$mean_n_routes,"on average, each year: ","local data available for",tt_sel$backcast_flag*100,
+                       "% of the years and regions included")
+
+    tt_sel <- trends_1 %>%
+      filter(trend_time == "Long-term", version == "This year",
+             region %in% c("United States of America"))
+    us_title <- paste("US long-term trend has",tt_sel$reliability,"overall reliability",
+                      ": coverage",tt_sel$reliab.cov*100,"% of the species' range :", tt_sel$precision, "precision :",
+                      tt_sel$backcast_reliab,"local data  :", tt_sel$n_routes,"routes total and ",
+                      tt_sel$mean_n_routes,"on average, each year: ","local data available for",tt_sel$backcast_flag*100,
+                      "% of the years and regions included")
+    main_caption <- paste0(can_title,"\n",us_title)
 
     layt <- trajs[[1]] + trajs[[3]] + trajs[[2]] +
       tplot + tmaps[[1]] + tmaps[[2]] +
       plot_layout(design = design,
                   guides = "collect",
-                  widths = 1)
+                  widths = 1) +
+      plot_annotation(title = main_title,
+                      caption = main_caption,
+                      theme = theme(plot.caption = element_text(size = 10),
+                                    plot.title = element_text(size = 12)))
 }
   print(layt)
 

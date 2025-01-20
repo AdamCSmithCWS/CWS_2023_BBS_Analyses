@@ -31,12 +31,12 @@ sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
 
 
-sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
-              "Common Loon",
-              "American Pipit",
-              "Redpoll (Common/Hoary)")
-sp_list <- sp_list %>%
-  filter(english %in% sp_rerun)
+# sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+#               "Common Loon",
+#               "American Pipit",
+#               "Redpoll (Common/Hoary)")
+# sp_list <- sp_list %>%
+#   filter(english %in% sp_rerun)
 
 regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
 
@@ -131,6 +131,13 @@ test <- foreach(i = rev(1:nrow(sp_list)),
       start_years <- c(first_year_long,first_year_short,first_year_three)
       names(start_years) <- c("Long-term","Short-term","Three-generation")
 
+      map_abund <- TRUE
+
+        maps_ab <- vector("list",3)
+        names(maps_ab) <- c("Long-term","Short-term","Three-generation")
+
+
+
 
       for(j in names(start_years)){
         ssy <- start_years[j]
@@ -175,6 +182,11 @@ test <- foreach(i = rev(1:nrow(sp_list)),
         map_tmp4 <- map_tmp2 + map_tmp3 + plot_layout(guides = "collect")
         maps_out_quart[[j]] <- map_tmp4
 
+        if(map_abund){
+          map_tmp_ab <- plot_map(trends_tmp,
+                                 alternate_column = "rel_abundance" )
+          maps_ab[[j]] <- map_tmp_ab
+        }
 
 
 

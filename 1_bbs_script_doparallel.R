@@ -19,7 +19,7 @@ re_fit <- FALSE# set to TRUE if re-running poorly converged models
 if(re_fit){
   #sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_",as_date(Sys.Date()),".rds"))
   sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
-  sp_re_fit <- c("Long-tailed Duck")
+  sp_re_fit <- c("American Crow")
 }
 
 miss <- FALSE
