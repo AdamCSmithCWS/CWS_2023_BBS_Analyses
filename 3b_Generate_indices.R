@@ -1,4 +1,12 @@
 ## generate indices for BBS results
+##
+## Uses the fitted model objects (output of bbsBayes2::run_model()) to estimate
+## the full suite of annual indices of abundance (both "full" indices that include
+## the annual fluctuations and "smooth" indices that are just the GAM-smooth from the
+## GAMYE model).
+## Estimates the indices for all regions and sub-regions
+## saves indices as .rds files for use in following scripts
+##
 library(bbsBayes2)
 library(tidyverse)
 library(foreach)
@@ -22,6 +30,8 @@ re_run <- TRUE # if TRUE will recalculate and overwrite previous saved indices f
 
 sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
+
+
 
 
 # final list of species where model did not converge (Eastern Screech Owl)

@@ -203,7 +203,7 @@ dev.off()
 
 # Plotting trend maps -----------------------------------------------------
 
-re_run <- FALSE
+re_run <- TRUE
 
 start_years <- c("Long-term","Short-term","Three-generation")
 

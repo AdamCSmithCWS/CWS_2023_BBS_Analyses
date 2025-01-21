@@ -1,4 +1,13 @@
-## generate indices for BBS results
+## generate trends from annual indices
+## estimates trends for all regions and sub-regions
+## trends for 3 time periods
+## script also maps the trends and the 25th and 75th quartiles of the trends and
+## saves them as rds files for creating pdfs in following scripts
+## also saves the annual indices as tables for compiling into the downloadable
+## csv files
+
+
+
 library(bbsBayes2)
 library(tidyverse)
 library(foreach)

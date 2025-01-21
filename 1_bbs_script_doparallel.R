@@ -1,4 +1,5 @@
-## testing bbsBayes2 parallel in HRE env
+## Script to fit BBS models in parallel
+##
 
 library(bbsBayes2)
 library(tidyverse)
@@ -9,7 +10,8 @@ library(cmdstanr)
 setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2023_BBS_Analyses")
 
 # set output_dir to the directory where the saved modeling output rds files will be stored
-# necessary on most systems because these output files are very large ( up to 5GB for broad-ranging species)
+# necessary on most of my machines and VMs because these output files are very large
+# ( > 5GB/species for broad-ranging species)
 output_dir <- "D:/CWS_2023_BBS_Analyses/output"
 #output_dir <- "output"
 
@@ -60,6 +62,9 @@ if(re_fit){
 # sp_list <- sp_list %>% filter(!aou %in% c(6882,5630,4090))
 #
 # i <- which(sp_list$aou == 6882)
+#
+
+
 # build cluster -----------------------------------------------------------
 
 n_cores = 5

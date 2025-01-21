@@ -1,4 +1,10 @@
-## generate indices for BBS results
+## Calculates all possible three-generation trends for every species
+## graphs the trend maps, and estimated trends through time to understand
+## how the three-generation trends are changing through time.
+## Intended to provide some assessment of the acceleration of trends
+## slowing declines, increasing declines, etc.
+## also the dependency of a trend estimate on the end years
+
 library(bbsBayes2)
 library(tidyverse)
 library(foreach)

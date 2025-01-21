@@ -10,9 +10,9 @@ library(doParallel)
 
 
 # set output_dir to the directory where the saved modeling output rds files are stored
-output_dir <- "D:/CWS_2023_BBS_Analyses/output"
+# output_dir <- "D:/CWS_2023_BBS_Analyses/output"
 # output_dir <- "output"
-# output_dir <- "F:/CWS_2022_BBS_Analyses/output"
+ output_dir <- "F:/CWS_2022_BBS_Analyses/output"
 
 
 
@@ -25,14 +25,14 @@ sp_list <- readRDS("species_list.rds") %>%
 # sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
 # sp_list <- sp_list %>%
 #   filter(english %in% sp_re_fit)
-
-sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
-              "Common Loon",
-              "American Pipit",
-              "Redpoll (Common/Hoary)")
-sp_list <- sp_list %>%
-  filter(english %in% sp_rerun)
-
+#
+# sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+#               "Common Loon",
+#               "American Pipit",
+#               "Redpoll (Common/Hoary)")
+# sp_list <- sp_list %>%
+#   filter(english %in% sp_rerun)
+#
 
 # build cluster -----------------------------------------------------------
 

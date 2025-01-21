@@ -1,4 +1,16 @@
 ## calculating BBS coverage by degree block
+## uses eBirdst seasonal range maps and BOTW range maps (if eBird not available)
+## plus the raw data file used in the model fitting
+## to calculate the proportion of a species' range within Canada and the USA
+## that falls within 1x1 degree grid cells that contribute data to the species
+## trend model and for a given trend period (separate coverage estimates for
+## long-, short-term, and three-generation trends)
+##
+##
+## Also, loads the generation times for each species from the R package naturecounts
+## for use in defining the time-period for the species-specific three-generation
+## trends
+
 
 # if (!requireNamespace("remotes", quietly = TRUE)) {
 #   install.packages("remotes")
