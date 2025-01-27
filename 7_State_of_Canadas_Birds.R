@@ -60,7 +60,7 @@ sp_list <- readRDS("sp_list_w_generations.rds") %>%
 
 
 
-re_collect <- FALSE
+re_collect <- TRUE
 # Compile all trends and indices ------------------------------------------------------
 
 if(re_collect){
@@ -455,7 +455,7 @@ trends_socb <- trends_out2 %>%
            prob_LI)
 
 readr::write_excel_csv(trends_socb,
-                       paste0("website/BBS_",YYYY,"_trends_for_socb.csv"))
+                       paste0(external_dir,"/website/BBS_",YYYY,"_trends_for_socb.csv"))
 
 # tmp <- trends_socb %>%
 #   filter(species_name == "Killdeer")
@@ -559,7 +559,7 @@ trends_socb <- trends_out2 %>%
          prob_LI)
 
 readr::write_excel_csv(trends_socb,
-                       paste0("website/BBS_",YYYY,"_extra_trends_for_socb.csv"))
+                       paste0(external_dir,"/website/BBS_",YYYY,"_extra_trends_for_socb.csv"))
 
 
 
@@ -636,7 +636,7 @@ indices_socb <- indices %>%
          smooth_index)
 
 readr::write_excel_csv(indices_socb,
-                       file = paste0("website/BBS_",YYYY,"_annual_indices_for_socb.csv"))
+                       file = paste0(external_dir,"/website/BBS_",YYYY,"_annual_indices_for_socb.csv"))
 
 
 # tmp <- indices_socb %>%
@@ -715,7 +715,7 @@ indices_socb <- indices %>%
          smooth_index)
 
 readr::write_excel_csv(indices_socb,
-                       file = paste0("website/BBS_",YYYY,"_extra_annual_indices_for_socb.csv"))
+                       file = paste0(external_dir,"/website/BBS_",YYYY,"_extra_annual_indices_for_socb.csv"))
 
 
 

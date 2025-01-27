@@ -12,7 +12,7 @@ setwd("C:/Users/SmithAC/Documents/GitHub/CWS_2023_BBS_Analyses")
 # set output_dir to the directory where the saved modeling output rds files will be stored
 # necessary on most of my machines and VMs because these output files are very large
 # ( > 5GB/species for broad-ranging species)
-output_dir <- "D:/CWS_2023_BBS_Analyses/output"
+output_dir <- "F:/CWS_2023_BBS_Analyses/output"
 #output_dir <- "output"
 
 write_over <- TRUE # set to TRUE if overwriting previously run models
@@ -21,7 +21,7 @@ re_fit <- FALSE# set to TRUE if re-running poorly converged models
 if(re_fit){
   #sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_",as_date(Sys.Date()),".rds"))
   sp_re_fit <- readRDS(paste0("species_rerun_converge_fail_2024-12-04.rds"))
-  sp_re_fit <- c("American Crow")
+  sp_re_fit <- c("American Robin")
 }
 
 miss <- FALSE
@@ -82,7 +82,7 @@ test <- foreach(i = rev(1:nrow(sp_list)),
   {
 
    # for(i in 1:4){
-    #for(i in rev(1:nrow(sp_list))){  # tmp_clr){ #
+    for(i in rev(1:nrow(sp_list))){  # tmp_clr){ #
     sp <- as.character(sp_list[i,"english"])
     aou <- as.integer(sp_list[i,"aou"])
 
