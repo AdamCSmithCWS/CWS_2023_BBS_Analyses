@@ -1,4 +1,9 @@
-## generate indices for BBS results
+## plkotting the population trajectory graphs
+## both simple population trajectories plus
+## complex diagnotstic plots that also show:
+##    the observed mean counts
+##    the mean realised observer effects in each year
+##    the mean realised route effects in each year
 library(bbsBayes2)
 library(tidyverse)
 library(foreach)
@@ -15,15 +20,22 @@ external_dir <- "F:/CWS_2023_BBS_Analyses"
 #setwd("C:/GitHub/CWS_2023_BBS_Analyses")
 
 # output_dir <- "output"
-n_cores = 10
-re_run <- FALSE
+n_cores = 6
+re_run <- TRUE
 
-sp_list <- readRDS("species_list.rds") %>%
+sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
+
+# sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+#               "Common Loon",
+#               "American Pipit",
+#               "Redpoll (Common/Hoary)")
+# sp_list <- sp_list %>%
+#   filter(english %in% sp_rerun)
 
 regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
 
-# load previous coverage data -----------------------------------------------------------
+# load previous trend and index data -----------------------------------------------------------
 
 lastyear = read_csv("data/All_BBS_trends_2022.csv")
 

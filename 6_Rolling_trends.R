@@ -1,4 +1,10 @@
-## generate indices for BBS results
+## Calculates all possible three-generation trends for every species
+## graphs the trend maps, and estimated trends through time to understand
+## how the three-generation trends are changing through time.
+## Intended to provide some assessment of the acceleration of trends
+## slowing declines, increasing declines, etc.
+## also the dependency of a trend estimate on the end years
+
 library(bbsBayes2)
 library(tidyverse)
 library(foreach)
@@ -22,17 +28,26 @@ source("functions/reliability.R")
 
 
 
-output_dir <- "output"
-n_cores = 10
+#output_dir <- "output"
+n_cores = 6
 re_run <- TRUE #set to TRUE to overwrite any previous output from this script
 
 
 sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
 
+
+sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+              "Common Loon",
+              "American Pipit",
+              "Redpoll (Common/Hoary)")
+sp_list <- sp_list %>%
+  filter(english %in% sp_rerun)
+
+
 regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
 
-# load previous coverage data -----------------------------------------------------------
+# load previous trend data -----------------------------------------------------------
 
 lastyear = read_csv("data/All_BBS_trends_2022.csv")
 

@@ -1,4 +1,4 @@
-### setup up HRE run for bbs
+### setup up annual bbs analyses
 ## generate list of species with simple data summaries
 ## identify which species to run and sort them into parallel-run groups (column "vm")
 

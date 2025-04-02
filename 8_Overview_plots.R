@@ -82,7 +82,7 @@ pdf(file = paste0("Figures/BBS_High_level_summary_",YYYY,".pdf"),
     height = 9,
     width = 17)
 
-for(jj in (411:nrow(species_to_run))){
+for(jj in (1:nrow(species_to_run))){
 
   species <- as.character(species_to_run[jj,"english"])
   espece <- as.character(species_to_run[jj,"french"])
@@ -129,19 +129,64 @@ tplot <- ggplot(data = trends_1)+
 246
 "
 
+  tt_sel <- trends_1 %>%
+    filter(trend_time == "Long-term", version == "This year",
+           region == "continent")
+  main_title <- paste(species,espece,"continent long-term trend has",tt_sel$reliability,"overall reliability",
+                      ": coverage",tt_sel$reliab.cov*100,"% :", tt_sel$precision, "precision :",
+                      tt_sel$backcast_reliab,"local data ")
+
   if(is.null(trajs[[2]])){
+    tt_sel <- trends_1 %>%
+      filter(trend_time == "Long-term", version == "This year",
+             region %in% c("United States of America"))
+    main_caption <- paste("US long-term trend has",tt_sel$reliability,"overall reliability",
+                          ": coverage",tt_sel$reliab.cov*100,"% of the species' range :", tt_sel$precision, "precision :",
+                          tt_sel$backcast_reliab,"local data  :", tt_sel$n_routes,"routes total and ",
+                          tt_sel$mean_n_routes,"on average, each year: ","local data available for",tt_sel$backcast_flag*100,
+                          "% of the years and regions included")
+
     layt <- trajs[[1]] + trajs[[3]] + plot_spacer() +
       tplot + tmaps[[1]] + tmaps[[2]] +
       plot_layout(design = design,
                   guides = "collect",
-                  widths = 1)
+                  widths = 1)+
+      plot_annotation(title = main_title,
+                      caption = main_caption,
+                      theme = theme(plot.caption = element_text(size = 10),
+                                    plot.title = element_text(size = 12)))
+
+
   }else{
+
+    tt_sel <- trends_1 %>%
+      filter(trend_time == "Long-term", version == "This year",
+             region %in% c("Canada"))
+    can_title <- paste("Canada long-term trend has",tt_sel$reliability,"overall reliability",
+                       ": coverage",tt_sel$reliab.cov*100,"% of the species' range :", tt_sel$precision, "precision :",
+                       tt_sel$backcast_reliab,"local data :", tt_sel$n_routes,"routes total and",
+                       tt_sel$mean_n_routes,"on average, each year: ","local data available for",tt_sel$backcast_flag*100,
+                       "% of the years and regions included")
+
+    tt_sel <- trends_1 %>%
+      filter(trend_time == "Long-term", version == "This year",
+             region %in% c("United States of America"))
+    us_title <- paste("US long-term trend has",tt_sel$reliability,"overall reliability",
+                      ": coverage",tt_sel$reliab.cov*100,"% of the species' range :", tt_sel$precision, "precision :",
+                      tt_sel$backcast_reliab,"local data  :", tt_sel$n_routes,"routes total and ",
+                      tt_sel$mean_n_routes,"on average, each year: ","local data available for",tt_sel$backcast_flag*100,
+                      "% of the years and regions included")
+    main_caption <- paste0(can_title,"\n",us_title)
 
     layt <- trajs[[1]] + trajs[[3]] + trajs[[2]] +
       tplot + tmaps[[1]] + tmaps[[2]] +
       plot_layout(design = design,
                   guides = "collect",
-                  widths = 1)
+                  widths = 1) +
+      plot_annotation(title = main_title,
+                      caption = main_caption,
+                      theme = theme(plot.caption = element_text(size = 10),
+                                    plot.title = element_text(size = 12)))
 }
   print(layt)
 
@@ -158,13 +203,13 @@ dev.off()
 
 # Plotting trend maps -----------------------------------------------------
 
-re_run <- FALSE
+re_run <- TRUE
 
 start_years <- c("Long-term","Short-term","Three-generation")
 
 
 
-n_cores <- 12
+n_cores <- 6
 cluster <- makeCluster(n_cores, type = "PSOCK")
 registerDoParallel(cluster)
 
@@ -180,12 +225,12 @@ test <- foreach(jj = rev(c(1:nrow(species_to_run))),
   species <- as.character(species_to_run[jj,"english"])
   espece <- as.character(species_to_run[jj,"french"])
   aou <- as.integer(species_to_run[jj,"aou"])
+  species_f_bil <- gsub(paste(species,espece),pattern = "[[:space:]]|[[:punct:]]",
+                        replacement = "_")
 
   if(file.exists(paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_maps.RDS")) &
      (!file.exists(paste0(external_dir,"/Figures/trend_maps/",species_f_bil,"_trend_maps.pdf")) |
       re_run)){
-    species_f_bil <- gsub(paste(species,espece),pattern = "[[:space:]]|[[:punct:]]",
-                          replacement = "_")
 
     tmaps <- readRDS(paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_maps.RDS"))
     qmaps <- readRDS(paste0(external_dir,"/Figures/temp_rds_storage/",aou,"_quart_maps.RDS"))

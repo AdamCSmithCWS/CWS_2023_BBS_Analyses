@@ -1,7 +1,8 @@
 
-
-
-###  - State of Canada's Birds
+### Generates the csv tables of trends and annual indices for sharing through the
+### Google Drive and for upload into the NatureCounts database to support
+###  - State of Canada's Birds, etc.
+###
 YYYY <- 2023
 
 webmaps <- FALSE # set to true if needing to create all map images for ECCC website
@@ -10,6 +11,7 @@ library(bbsBayes2)
 library(tidyverse)
 library(patchwork)
 library(ggrepel)
+library(readxl)
 #setwd("C:/GitHub/CWS_2023_BBS_Analyses")
 
 external_dir <- "F:/CWS_2023_BBS_Analyses"
@@ -21,6 +23,7 @@ source("functions/loess_func.R")
 
 sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
+
 #
 # avian_core <- read_csv("data/ECCC Avian Core 20230601.csv") %>%
 #   rename_with(.,.fn = ~paste0(.x,"_core")) %>%
@@ -108,9 +111,19 @@ saveRDS(indices_smooth,"output/indices_smooth_collected.rds")
 
 # Compare to last year's trends -------------------------------------------
 
+avian_core <- readxl::read_xlsx("data/ECCC Avian Core 20241025.xlsx") %>%
+  filter(Full_Species == "Yes") %>%
+  select(Species_ID, BBS_Number, Sort_Order) %>%
+  rename_with(.,.fn = ~paste0(.x,"_core")) %>%
+  distinct() %>%
+  mutate(aou = as.integer(BBS_Number_core))
+
 core_link <- sp_list %>%
   ungroup() %>%
-  select(naturecounts_sort_order,aou,naturecounts_species_id)
+  select(naturecounts_sort_order,aou,naturecounts_species_id) %>%
+  left_join(avian_core, by = "aou")
+
+
 
 lastyear = read_csv("data/All_BBS_trends_2022.csv")
 
@@ -118,13 +131,16 @@ ly_trends <- lastyear[,c("species","bbs_num","region","trend_time",
                          "n_strata_included","n_routes",
                          "trend",
                          "trend_q_0.05","trend_q_0.95",
-                         "width_of_95_percent_credible_interval")] %>%
+                         "width_of_95_percent_credible_interval",
+                         "reliab.cov","coverage")] %>%
   rename(trend_2022 = trend,
          trend_q_0.05_2022 = trend_q_0.05,
          trend_q_0.95_2022 = trend_q_0.95,
          number_of_strata_2022 = n_strata_included,
          number_of_routes_2022 = n_routes,
-         CI_2022 = width_of_95_percent_credible_interval) %>%
+         CI_2022 = width_of_95_percent_credible_interval,
+         reliab_cov_2022 = reliab.cov,
+         coverage_2022 = coverage) %>%
   filter(region %in% c("continent","Canada","United States of America")) %>%
   select(-c(species))
 
@@ -136,7 +152,8 @@ trends_comp <- trends %>%
                     "region",
                     "trend_time")) %>%
   left_join(.,core_link,by = c("bbs_num" = "aou")) %>%
-  mutate(diff_trend = trend - trend_2022) %>%
+  mutate(diff_trend = trend - trend_2022,
+         diff_coverage = reliab.cov - reliab_cov_2022) %>%
   rename(CI = width_of_95_percent_credible_interval)
 
 
@@ -153,6 +170,23 @@ comp_xy <- ggplot(data = trends_comp,
              scales = "free")
 
 comp_xy
+
+
+
+
+comp_xy_cov <- ggplot(data = trends_comp,
+                  aes(x = reliab_cov_2022,
+                      y = reliab.cov,
+                      colour = coverage))+
+  geom_point(alpha = 0.2)+
+  geom_abline(intercept = 0,slope = 1)+
+  geom_hline(yintercept = 0)+
+  geom_vline(xintercept = 0)+
+  facet_grid(cols = vars(trend_time),
+             rows = vars(region),
+             scales = "free")
+
+comp_xy_cov
 
 
 
@@ -254,60 +288,71 @@ saveRDS(indices_smooth,paste0(external_dir,"/Website/All_BBS_Smoothed_Indices_",
 saveRDS(trends,paste0(external_dir,"/Website/All_BBS_Trends_",YYYY,".rds"))
 
 
-write_csv(indices,paste0(external_dir,"/Website/All_BBS_Full_Indices_",YYYY,".csv"))
-write_csv(indices_smooth,paste0(external_dir,"/Website/All_BBS_Smoothed_Indices_",YYYY,".csv"))
-write_csv(trends,paste0(external_dir,"/Website/All_BBS_Trends_",YYYY,".csv"))
+readr::write_excel_csv(indices,paste0(external_dir,"/Website/All_BBS_Full_Indices_",YYYY,".csv"))
+readr::write_excel_csv(indices_smooth,paste0(external_dir,"/Website/All_BBS_Smoothed_Indices_",YYYY,".csv"))
+readr::write_excel_csv(trends,paste0(external_dir,"/Website/All_BBS_Trends_",YYYY,".csv"))
 
 inds_select <- indices %>%
   filter(region_type %in% c("continent","country"))
-write_csv(inds_select,paste0(external_dir,"/Website/BBS_Full_Indices_continent_country_",YYYY,".csv"))
+readr::write_excel_csv(inds_select,paste0(external_dir,"/Website/BBS_Full_Indices_continent_country_",YYYY,".csv"))
 
 inds_select <- indices %>%
   filter(region_type %in% c("prov_state"))
-write_csv(inds_select,paste0(external_dir,"/Website/BBS_Full_Indices_prov_state_",YYYY,".csv"))
+readr::write_excel_csv(inds_select,paste0(external_dir,"/Website/BBS_Full_Indices_prov_state_",YYYY,".csv"))
 
 
 inds_select <- indices %>%
   filter(region_type %in% c("bcr"))
-write_csv(inds_select,paste0(external_dir,"/Website/BBS_Full_Indices_bcr_",YYYY,".csv"))
+readr::write_excel_csv(inds_select,paste0(external_dir,"/Website/BBS_Full_Indices_bcr_",YYYY,".csv"))
 
 inds_select <- indices %>%
   filter(region_type %in% c("bcr_by_country"))
-write_csv(inds_select,paste0(external_dir,"/Website/BBS_Full_Indices_bcr_by_country_",YYYY,".csv"))
+readr::write_excel_csv(inds_select,paste0(external_dir,"/Website/BBS_Full_Indices_bcr_by_country_",YYYY,".csv"))
 
 
 inds_select <- indices_smooth %>%
   filter(region_type %in% c("continent","country"))
-write_csv(inds_select,paste0(external_dir,"/Website/BBS_Smoothed_Indices_continent_country_",YYYY,".csv"))
+readr::write_excel_csv(inds_select,paste0(external_dir,"/Website/BBS_Smoothed_Indices_continent_country_",YYYY,".csv"))
 
 inds_select <- indices_smooth %>%
   filter(region_type %in% c("prov_state"))
-write_csv(inds_select,paste0(external_dir,"/Website/BBS_Smoothed_Indices_prov_state_",YYYY,".csv"))
+readr::write_excel_csv(inds_select,paste0(external_dir,"/Website/BBS_Smoothed_Indices_prov_state_",YYYY,".csv"))
 
 
 inds_select <- indices_smooth %>%
   filter(region_type %in% c("bcr"))
-write_csv(inds_select,paste0(external_dir,"/Website/BBS_Smoothed_Indices_bcr_",YYYY,".csv"))
+readr::write_excel_csv(inds_select,paste0(external_dir,"/Website/BBS_Smoothed_Indices_bcr_",YYYY,".csv"))
 
 inds_select <- indices_smooth %>%
   filter(region_type %in% c("bcr_by_country"))
-write_csv(inds_select,paste0(external_dir,"/Website/BBS_Smoothed_Indices_bcr_by_country_",YYYY,".csv"))
+readr::write_excel_csv(inds_select,paste0(external_dir,"/Website/BBS_Smoothed_Indices_bcr_by_country_",YYYY,".csv"))
 
 
 
 
 trends_select <- trends %>%
   filter(region_type %in% c("continent","country","prov_state"))
-write_csv(trends_select,paste0(external_dir,"/Website/BBS_Trends_continent_country_prov_state_",YYYY,".csv"))
+readr::write_excel_csv(trends_select,paste0(external_dir,"/Website/BBS_Trends_continent_country_prov_state_",YYYY,".csv"))
 trends_select <- trends %>%
   filter(region_type %in% c("bcr","bcr_by_country"))
-write_csv(trends_select,paste0(external_dir,"/Website/BBS_Trends_bcr_bcr_by_country_",YYYY,".csv"))
+readr::write_excel_csv(trends_select,paste0(external_dir,"/Website/BBS_Trends_bcr_bcr_by_country_",YYYY,".csv"))
 trends_select <- trends %>%
   filter(region_type %in% c("stratum"))
-write_csv(trends_select,paste0(external_dir,"/Website/BBS_Trends_strata_",YYYY,".csv"))
+readr::write_excel_csv(trends_select,paste0(external_dir,"/Website/BBS_Trends_strata_",YYYY,".csv"))
 
 
+sp_no_coverage <- trends %>%
+  mutate(w_cov = ifelse(is.na(reliab.cov),FALSE,TRUE)) %>%
+  group_by(species,trend_time,w_cov) %>%
+  summarise(n_regions = n(),
+            .groups = "drop") %>%
+  pivot_wider(.,values_from = n_regions,names_from = w_cov,names_prefix = "cov") %>%
+  mutate(covTRUE = ifelse(is.na(covTRUE),0,covTRUE),
+         covFALSE = ifelse(is.na(covFALSE),0,covFALSE),
+         p_missing_coverage = covFALSE/covTRUE)
 
+
+saveRDS(sp_no_coverage,"species_coverage_summary.rds")
 
 # SOCB upload files -------------------------------------------------------
 
@@ -410,7 +455,7 @@ trends_socb <- trends_out2 %>%
            prob_LI)
 
 readr::write_excel_csv(trends_socb,
-                       paste0("website/BBS_",YYYY,"_trends_for_socb.csv"))
+                       paste0(external_dir,"/website/BBS_",YYYY,"_trends_for_socb.csv"))
 
 # tmp <- trends_socb %>%
 #   filter(species_name == "Killdeer")
@@ -514,7 +559,7 @@ trends_socb <- trends_out2 %>%
          prob_LI)
 
 readr::write_excel_csv(trends_socb,
-                       paste0("website/BBS_",YYYY,"_extra_trends_for_socb.csv"))
+                       paste0(external_dir,"/website/BBS_",YYYY,"_extra_trends_for_socb.csv"))
 
 
 
@@ -591,7 +636,7 @@ indices_socb <- indices %>%
          smooth_index)
 
 readr::write_excel_csv(indices_socb,
-                       file = paste0("website/BBS_",YYYY,"_annual_indices_for_socb.csv"))
+                       file = paste0(external_dir,"/website/BBS_",YYYY,"_annual_indices_for_socb.csv"))
 
 
 # tmp <- indices_socb %>%
@@ -670,7 +715,7 @@ indices_socb <- indices %>%
          smooth_index)
 
 readr::write_excel_csv(indices_socb,
-                       file = paste0("website/BBS_",YYYY,"_extra_annual_indices_for_socb.csv"))
+                       file = paste0(external_dir,"/website/BBS_",YYYY,"_extra_annual_indices_for_socb.csv"))
 
 
 

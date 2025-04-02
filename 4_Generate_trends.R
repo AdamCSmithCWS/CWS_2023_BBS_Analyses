@@ -1,4 +1,13 @@
-## generate indices for BBS results
+## generate trends from annual indices
+## estimates trends for all regions and sub-regions
+## trends for 3 time periods
+## script also maps the trends and the 25th and 75th quartiles of the trends and
+## saves them as rds files for creating pdfs in following scripts
+## also saves the annual indices as tables for compiling into the downloadable
+## csv files
+
+
+
 library(bbsBayes2)
 library(tidyverse)
 library(foreach)
@@ -20,7 +29,7 @@ output_dir <- "F:/CWS_2023_BBS_Analyses/output"
 external_dir <- "F:/CWS_2023_BBS_Analyses"
 
 
-n_cores <- 10
+n_cores <- 6
 re_run <- TRUE
 
 # species list that also includes generation length
@@ -29,6 +38,14 @@ re_run <- TRUE
 
 sp_list <- readRDS("sp_list_w_generations.rds") %>%
   filter(model == TRUE)
+
+
+# sp_rerun <- c("Northern Shrike","Willow Ptarmigan", "Herring Gull",
+#               "Common Loon",
+#               "American Pipit",
+#               "Redpoll (Common/Hoary)")
+# sp_list <- sp_list %>%
+#   filter(english %in% sp_rerun)
 
 regs_to_estimate <- c("continent","country","prov_state","bcr","stratum","bcr_by_country")
 
@@ -123,6 +140,13 @@ test <- foreach(i = rev(1:nrow(sp_list)),
       start_years <- c(first_year_long,first_year_short,first_year_three)
       names(start_years) <- c("Long-term","Short-term","Three-generation")
 
+      map_abund <- TRUE
+
+        maps_ab <- vector("list",3)
+        names(maps_ab) <- c("Long-term","Short-term","Three-generation")
+
+
+
 
       for(j in names(start_years)){
         ssy <- start_years[j]
@@ -167,6 +191,11 @@ test <- foreach(i = rev(1:nrow(sp_list)),
         map_tmp4 <- map_tmp2 + map_tmp3 + plot_layout(guides = "collect")
         maps_out_quart[[j]] <- map_tmp4
 
+        if(map_abund){
+          map_tmp_ab <- plot_map(trends_tmp,
+                                 alternate_column = "rel_abundance" )
+          maps_ab[[j]] <- map_tmp_ab
+        }
 
 
 
