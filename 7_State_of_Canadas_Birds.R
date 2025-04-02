@@ -287,6 +287,11 @@ saveRDS(indices,paste0(external_dir,"/Website/All_BBS_Full_Indices_",YYYY,".rds"
 saveRDS(indices_smooth,paste0(external_dir,"/Website/All_BBS_Smoothed_Indices_",YYYY,".rds"))
 saveRDS(trends,paste0(external_dir,"/Website/All_BBS_Trends_",YYYY,".rds"))
 
+# trends <- readRDS(paste0(external_dir,"/Website/All_BBS_Trends_",YYYY,".rds"))
+# indices_smooth <- readRDS(paste0(external_dir,"/Website/All_BBS_Smoothed_Indices_",YYYY,".rds"))
+# indices <- readRDS(paste0(external_dir,"/Website/All_BBS_Full_Indices_",YYYY,".rds"))
+#
+# tst <- indices_smooth %>% filter(region == "continent", trend_time == "Long-term") %>% group_by(species) %>% summarise(n_test = n())
 
 readr::write_excel_csv(indices,paste0(external_dir,"/Website/All_BBS_Full_Indices_",YYYY,".csv"))
 readr::write_excel_csv(indices_smooth,paste0(external_dir,"/Website/All_BBS_Smoothed_Indices_",YYYY,".csv"))

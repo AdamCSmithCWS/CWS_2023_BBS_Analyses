@@ -1,7 +1,7 @@
 
 ## compile trend and index files for
 ### 1 - website
-YYYY <- 2022
+YYYY <- 2023
 
 webmaps <- TRUE # set to true if needing to create all map images for ECCC website
 
@@ -37,48 +37,68 @@ web <- trends %>%
          strata_included = paste(strata_included,strata_excluded,sep = " ; "),
          strata_excluded = "")
 
-web_species <- read.csv("data/BBS_AvianCore.csv")
+#web_species <- read.csv("data/BBS_AvianCore.csv")
+
+
+
+avian_core <- readxl::read_xlsx("data/ECCC Avian Core 20241025.xlsx") %>%
+ # filter(Full_Species == "Yes") %>%
+  select(Species_ID, BBS_Number, Sort_Order) %>%
+  rename_with(.,.fn = ~paste0(.x,"_core")) %>%
+  distinct() %>%
+  mutate(aou = as.integer(BBS_Number_core))
+
+# core_link <- sp_list %>%
+#   ungroup() %>%
+#   select(naturecounts_sort_order,aou,naturecounts_species_id) %>%
+#   left_join(avian_core, by = "aou")
+
 
 names_match <- web %>%
   select(species,espece,bbs_num) %>%
-  distinct()
+  distinct()%>%
+  left_join(avian_core, by = c("bbs_num" = "aou")) %>%
+  filter(!is.na(Species_ID_core))
 
-miss_bbs_num <- names_match %>%
-  select(bbs_num,species) %>%
-  left_join(.,
-            web_species,
-            by = c("bbs_num" = "bbsNumber"),
-            multiple = "all") %>%
-  arrange(bbs_num) %>%
-  filter(is.na(commonNameE))
+web <- web %>%
+  filter(bbs_num %in% names_match$bbs_num)
 
-if(nrow(miss_bbs_num) > 0){
-  warning("At least one bbs number is missing from Avian Core")
-
-  print(paste("Avian core is missing",
-              paste(miss_bbs_num$bbs_num,
-                    collapse = ", ")))
-  web <- web %>%
-    filter(bbs_num %in% web_species$bbsNumber)
-}
-
-
-miss_english_names <- names_match %>%
-  select(bbs_num,species,espece) %>%
-  left_join(.,
-            web_species,
-            by = c("species" = "commonNameE"),
-            multiple = "all") %>%
-  arrange(bbs_num) %>%
-  filter(is.na(bbs_num))
-
-
-if(nrow(miss_english_names) > 0){
-  warning("At least one species name is missing from Avian Core")
-  web <- web %>%
-    filter(species %in% web_species$commonNameE)
-
-}
+# miss_bbs_num <- names_match %>%
+#   select(bbs_num,species) %>%
+#   left_join(.,
+#             web_species,
+#             by = c("bbs_num" = "bbsNumber"),
+#             multiple = "all") %>%
+#   arrange(bbs_num) %>%
+#   filter(is.na(commonNameE))
+#
+# if(nrow(miss_bbs_num) > 0){
+#   warning("At least one bbs number is missing from Avian Core")
+#
+#   print(paste("Avian core is missing",
+#               paste(miss_bbs_num$bbs_num,
+#                     collapse = ", ")))
+#   web <- web %>%
+#     filter(bbs_num %in% web_species$bbsNumber)
+# }
+#
+#
+# miss_english_names <- names_match %>%
+#   select(bbs_num,species,espece) %>%
+#   left_join(.,
+#             web_species,
+#             by = c("species" = "commonNameE"),
+#             multiple = "all") %>%
+#   arrange(bbs_num) %>%
+#   filter(is.na(bbs_num))
+#
+#
+# if(nrow(miss_english_names) > 0){
+#   warning("At least one species name is missing from Avian Core")
+#   web <- web %>%
+#     filter(species %in% web_species$commonNameE)
+#
+# }
 
 # generate maps for CWS website -------------------------------------------
 
@@ -217,7 +237,7 @@ webi <- indices %>%
   bind_rows(.,webi_short)
 
 webi <- webi %>%
-  filter(bbs_num %in% web_species$bbsNumber)
+  filter(bbs_num %in% names_match$bbs_num)
 
 clouti =  c("bbs_num",
             "species",
