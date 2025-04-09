@@ -3,7 +3,7 @@
 ### 1 - website
 YYYY <- 2023
 
-webmaps <- TRUE # set to true if needing to create all map images for ECCC website
+webmaps <- FALSE # set to true if needing to create all map images for ECCC website
 
 library(bbsBayes2)
 library(tidyverse)
@@ -37,7 +37,7 @@ web <- trends %>%
          strata_included = paste(strata_included,strata_excluded,sep = " ; "),
          strata_excluded = "")
 
-#web_species <- read.csv("data/BBS_AvianCore.csv")
+web_species <- read.csv("required_data/BBS_AvianCore.csv")
 
 
 
@@ -59,6 +59,15 @@ names_match <- web %>%
   distinct()%>%
   left_join(avian_core, by = c("bbs_num" = "aou")) %>%
   filter(!is.na(Species_ID_core))
+sp_not_on_website <- names_match %>%
+  filter(!bbs_num %in% web_species$bbsNumber)
+
+names_match <- web %>%
+  select(species,espece,bbs_num) %>%
+  distinct()%>%
+  left_join(avian_core, by = c("bbs_num" = "aou")) %>%
+  filter(!is.na(Species_ID_core),
+         bbs_num %in% web_species$bbsNumber)
 
 web <- web %>%
   filter(bbs_num %in% names_match$bbs_num)
