@@ -28,7 +28,8 @@ web <- trends %>%
   filter(for_web == TRUE,
          region != "continent",
          region_type != "bcr",
-         trend_time != "Three-generation") %>%
+         trend_time != "Three-generation",
+         !(region == "BCR7" & region_type == "prov_state")) %>%
   mutate(prob_decrease_0_25_percent = prob_decrease_0_percent-prob_decrease_25_percent,
          prob_decrease_25_50_percent = prob_decrease_0_percent - (prob_decrease_0_25_percent + prob_decrease_50_percent),
          prob_increase_0_33_percent = prob_increase_0_percent-prob_increase_33_percent,
@@ -235,14 +236,16 @@ webi_short <- indices %>%
          region != "continent",
          region_type != "bcr",
          year > (YYYY-11),
-         trend_time == "Short-term")
+         trend_time == "Short-term",
+         !(region == "BCR7" & region_type == "prov_state"))
 
 webi <- indices %>%
   filter(for_web == TRUE,
          region != "continent",
          region_type != "bcr",
          year > 1969,
-         trend_time == "Long-term") %>%
+         trend_time == "Long-term",
+         !(region == "BCR7" & region_type == "prov_state")) %>%
   bind_rows(.,webi_short)
 
 webi <- webi %>%
