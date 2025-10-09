@@ -5,12 +5,12 @@
 #
 #
 
-species_sel <- c("Grasshopper Sparrow")
+species_sel <- c("Great Horned Owl")
 
-outname <- "GRSP"# must supply meaningful file name suffix for output files
+outname <- "grhowl"# must supply meaningful file name suffix for output files
 
 
-YYYY <- 2022
+YYYY <- 2023
 
 library(bbsBayes2)
 library(tidyverse)
@@ -49,7 +49,26 @@ write_excel_csv(ism,
                 paste0("temp/custom_output/smoothed_annual_indices_",outname,".csv"))
 
 
+i_plot <- i %>%
+  filter(region == "Canada",
+         trend_time == "Long-term",
+         year > 1994)
+tmpnat <- ggplot(data = i_plot,
+                 aes(x = year,y = index))+
+  geom_ribbon(aes(ymin = index_q_0.05,
+                  ymax = index_q_0.95),
+              alpha = 0.3)+
+  geom_line()+
+  scale_y_continuous(limits = c(0,NA))+
+  ylab("BBS Annual Index")+
+  xlab("")+
+  theme_bw()
 
+png(paste0("temp/custom_output/tmp_grhowl_traj_bbs.png"),
+    res = 300, height = 5, width = 8,
+    units = "in")
+print(tmpnat)
+dev.off()
 
 
 
