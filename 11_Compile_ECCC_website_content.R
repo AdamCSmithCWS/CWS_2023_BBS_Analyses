@@ -3,7 +3,7 @@
 ### 1 - website
 YYYY <- 2023
 
-webmaps <- TRUE # set to true if needing to create all map images for ECCC website
+webmaps <- FALSE # set to true if needing to create all map images for ECCC website
 
 library(bbsBayes2)
 library(tidyverse)
@@ -28,7 +28,8 @@ web <- trends %>%
   filter(for_web == TRUE,
          region != "continent",
          region_type != "bcr",
-         trend_time != "Three-generation") %>%
+         trend_time != "Three-generation",
+         !(region == "BCR7" & region_type == "prov_state")) %>%
   mutate(prob_decrease_0_25_percent = prob_decrease_0_percent-prob_decrease_25_percent,
          prob_decrease_25_50_percent = prob_decrease_0_percent - (prob_decrease_0_25_percent + prob_decrease_50_percent),
          prob_increase_0_33_percent = prob_increase_0_percent-prob_increase_33_percent,
@@ -37,7 +38,7 @@ web <- trends %>%
          strata_included = paste(strata_included,strata_excluded,sep = " ; "),
          strata_excluded = "")
 
-#web_species <- read.csv("data/BBS_AvianCore.csv")
+web_species <- read.csv("required_data/BBS_AvianCore.csv")
 
 
 
@@ -59,6 +60,15 @@ names_match <- web %>%
   distinct()%>%
   left_join(avian_core, by = c("bbs_num" = "aou")) %>%
   filter(!is.na(Species_ID_core))
+sp_not_on_website <- names_match %>%
+  filter(!bbs_num %in% web_species$bbsNumber)
+
+names_match <- web %>%
+  select(species,espece,bbs_num) %>%
+  distinct()%>%
+  left_join(avian_core, by = c("bbs_num" = "aou")) %>%
+  filter(!is.na(Species_ID_core),
+         bbs_num %in% web_species$bbsNumber)
 
 web <- web %>%
   filter(bbs_num %in% names_match$bbs_num)
@@ -226,14 +236,16 @@ webi_short <- indices %>%
          region != "continent",
          region_type != "bcr",
          year > (YYYY-11),
-         trend_time == "Short-term")
+         trend_time == "Short-term",
+         !(region == "BCR7" & region_type == "prov_state"))
 
 webi <- indices %>%
   filter(for_web == TRUE,
          region != "continent",
          region_type != "bcr",
          year > 1969,
-         trend_time == "Long-term") %>%
+         trend_time == "Long-term",
+         !(region == "BCR7" & region_type == "prov_state")) %>%
   bind_rows(.,webi_short)
 
 webi <- webi %>%
